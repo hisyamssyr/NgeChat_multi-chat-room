@@ -1,1 +1,0 @@
-# Voice client implementation
