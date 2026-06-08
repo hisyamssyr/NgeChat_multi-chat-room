@@ -599,3 +599,43 @@ Traceback (most recent call last):
 TypeError: execute() argument 1 must be str, not tuple
 2026-06-08 19:57:21  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['test2'])
 2026-06-08 19:57:21  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['test2']).
+2026-06-08 20:01:38  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 20:01:38  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 20:01:38  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 20:01:57  INFO      __main__                        New connection from 127.0.0.1:62139
+2026-06-08 20:01:57  INFO      server.database                 New user registered: tes1
+2026-06-08 20:01:57  INFO      __main__                        Registered new user: tes1
+2026-06-08 20:01:57  INFO      server.room_manager             User came online: tes1
+2026-06-08 20:01:57  INFO      __main__                        User logged in: tes1 from 127.0.0.1:62139
+2026-06-08 20:02:15  INFO      __main__                        New connection from 127.0.0.1:59131
+2026-06-08 20:02:15  INFO      server.database                 New user registered: tes2
+2026-06-08 20:02:15  INFO      __main__                        Registered new user: tes2
+2026-06-08 20:02:15  INFO      server.room_manager             User came online: tes2
+2026-06-08 20:02:15  INFO      __main__                        User logged in: tes2 from 127.0.0.1:59131
+2026-06-08 20:02:21  INFO      __main__                        Private message: 'tes2' → 'tes1': helaw
+2026-06-08 20:02:46  INFO      server.database                 Room created: 'room_tes2' by tes2 (code=C4L3C4L0)
+2026-06-08 20:02:49  INFO      server.room_manager             'tes2' joined room 'room_tes2'
+2026-06-08 20:02:49  INFO      __main__                        'tes2' joined room 'room_tes2'.
+2026-06-08 20:02:51  INFO      __main__                        Broadcast in 'room_tes2' by 'tes2': C4L3C4L0
+2026-06-08 20:02:58  INFO      __main__                        Private message: 'tes2' → 'tes1': C4L3C4L0
+2026-06-08 20:03:03  INFO      __main__                        Private message: 'tes2' → 'tes1': tuh pw nya
+2026-06-08 20:03:12  INFO      __main__                        Private message: 'tes1' → 'tes2': oek thanks
+2026-06-08 20:03:37  INFO      __main__                        'tes1' joined room 'room_tes2' via invite code.
+2026-06-08 20:03:37  INFO      server.room_manager             'tes1' joined room 'room_tes2'
+2026-06-08 20:03:42  INFO      __main__                        Broadcast in 'room_tes2' by 'tes1': hay syg
+2026-06-08 20:04:01  INFO      server.room_manager             'tes1' left room 'room_tes2'
+2026-06-08 20:04:01  INFO      __main__                        'tes1' left room 'room_tes2' permanently.
+2026-06-08 20:04:10  INFO      __main__                        'tes1' joined room 'room_tes2' via invite code.
+2026-06-08 20:04:10  INFO      server.room_manager             'tes1' joined room 'room_tes2'
+2026-06-08 20:04:23  INFO      server.database                 Room deleted permanently: 'room_tes2' by tes2
+2026-06-08 20:04:23  INFO      server.room_manager             Room 'room_tes2' was deleted and removed from active tracking.
+2026-06-08 20:04:27  INFO      __main__                        User logged out: tes2
+2026-06-08 20:04:27  INFO      server.room_manager             User went offline: tes2 (was in rooms: [])
+2026-06-08 20:04:27  INFO      __main__                        Cleaned up session for 'tes2' (was in: []).
+2026-06-08 20:04:30  INFO      __main__                        Client 127.0.0.1:62139 disconnected.
+2026-06-08 20:04:30  INFO      server.room_manager             User went offline: tes1 (was in rooms: [])
+2026-06-08 20:04:30  INFO      __main__                        Cleaned up session for 'tes1' (was in: []).

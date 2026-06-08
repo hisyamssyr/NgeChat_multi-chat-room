@@ -100,7 +100,7 @@ class Database:
                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
                     room_name     TEXT    UNIQUE NOT NULL,
                     created_by    TEXT    NOT NULL,
-                    invite_hash   TEXT    NOT NULL DEFAULT ''
+                    invite_code   TEXT    NOT NULL DEFAULT ''
                 );
 
                 CREATE TABLE IF NOT EXISTS room_members (
@@ -122,7 +122,7 @@ class Database:
 
             # ── Auto-migrations (safe to run every startup) ────────────────
             migrations = [
-                "ALTER TABLE rooms ADD COLUMN invite_hash TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE rooms ADD COLUMN invite_code TEXT NOT NULL DEFAULT ''",
                 # Drop old password_hash col: SQLite doesn’t support DROP COLUMN
                 # before 3.35, so we just ignore it if it exists.
             ]
@@ -247,9 +247,9 @@ class Database:
         with self._lock:
             try:
                 self._conn.execute(
-                    "INSERT INTO rooms (room_name, created_by, invite_hash)"
+                    "INSERT INTO rooms (room_name, created_by, invite_code)"
                     " VALUES (?, ?, ?)",
-                    (room_name, created_by, invite_hash),
+                    (room_name, created_by, invite_code),
                 )
                 # Creator is automatically a member.
                 self._conn.execute(
@@ -350,13 +350,13 @@ class Database:
     # Returns True if correct, False if wrong or room doesn't exist.
         with self._lock:
             row = self._conn.execute(
-                "SELECT invite_hash FROM rooms WHERE room_name = ?",
+                "SELECT invite_code FROM rooms WHERE room_name = ?",
                 (room_name.strip(),),
             ).fetchone()
 
         if row is None:
             return False
-        return self._hash_password(code.strip()) == row["invite_hash"]
+        return code.strip().upper() == row["invite_code"]
 
     def get_all_rooms(self, username: str = "") -> list[dict]:
             # Return rooms the user is a member of (or all rooms if no username given).
@@ -365,7 +365,7 @@ class Database:
             if username:
                 # Only rooms where the user is a member.
                 rows = self._conn.execute(
-                    "SELECT r.room_name, r.created_by, 1 AS is_member"
+                    "SELECT r.room_name, r.created_by, r.invite_code, 1 AS is_member"
                     " FROM rooms r"
                     " JOIN room_members m ON m.room_name = r.room_name"
                     " WHERE m.username = ?"
@@ -374,15 +374,16 @@ class Database:
                 ).fetchall()
             else:
                 rows = self._conn.execute(
-                    "SELECT room_name, created_by, 0 AS is_member"
+                    "SELECT room_name, created_by, invite_code, 0 AS is_member"
                     " FROM rooms ORDER BY room_name ASC"
                 ).fetchall()
 
             return [
                 {
-                    "room_name":  r["room_name"],
-                    "created_by": r["created_by"],
-                    "is_member":  bool(r["is_member"]),
+                    "room_name":   r["room_name"],
+                    "created_by":  r["created_by"],
+                    "invite_code": r["invite_code"],
+                    "is_member":   bool(r["is_member"]),
                 }
                 for r in rows
             ]
@@ -390,11 +391,11 @@ class Database:
     def get_room_by_code(self, code: str) -> str | None:
             # Look up the room name whose invite code matches `code`.
     # Returns the room_name string on success, or None if no room matches.
-        code_hash = self._hash_password(code.strip().upper())
+        code = code.strip().upper()
         with self._lock:
             row = self._conn.execute(
-                "SELECT room_name FROM rooms WHERE invite_hash = ?",
-                (code_hash,),
+                "SELECT room_name FROM rooms WHERE invite_code = ?",
+                (code,),
             ).fetchone()
         return row["room_name"] if row else None
 
