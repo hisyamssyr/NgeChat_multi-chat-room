@@ -1,4 +1,4 @@
-"""Main 3-panel chat window for the Multi-Chat Room GUI."""
+# Main 3-panel chat window for the Multi-Chat Room GUI.
 
 import sys
 import os
@@ -25,14 +25,14 @@ from client.gui.styles import (
 )
 
 def _fmt_ts(timestamp: str) -> str:
-    """'2026-06-08 14:01:33 UTC' → '14:01'."""
+    # '2026-06-08 14:01:33 UTC' → '14:01'.
     try:
         return timestamp.split(" ")[1][:5]
     except Exception:
         return ""
 
 def _escape(text: str) -> str:
-    """HTML-escape user text and convert newlines to <br/>."""
+    # HTML-escape user text and convert newlines to <br/>.
     return (
         text.replace("&", "&amp;")
             .replace("<", "&lt;")
@@ -42,7 +42,7 @@ def _escape(text: str) -> str:
 
 def _html_broadcast(sender: str, message: str, timestamp: str,
                     is_own: bool) -> str:
-    """WhatsApp-style chat bubble — right for own, left for others."""
+    # WhatsApp-style chat bubble — right for own, left for others.
     ts  = _fmt_ts(timestamp)
     msg = _escape(message)
 
@@ -93,7 +93,7 @@ def _html_broadcast(sender: str, message: str, timestamp: str,
         )
 
 def _html_private(sender: str, message: str, timestamp: str) -> str:
-    """Purple bubble for incoming private messages."""
+    # Purple bubble for incoming private messages.
     ts  = _fmt_ts(timestamp)
     msg = _escape(message)
     return (
@@ -122,7 +122,7 @@ def _html_private(sender: str, message: str, timestamp: str) -> str:
     )
 
 def _html_notification(message: str) -> str:
-    """Centered system notification (join / leave / disconnect)."""
+    # Centered system notification (join / leave / disconnect).
     msg = _escape(message)
     return (
         '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
@@ -143,7 +143,7 @@ def _html_notification(message: str) -> str:
     )
 
 def _html_history_separator(room: str) -> str:
-    """Divider shown above history messages on room join."""
+    # Divider shown above history messages on room join.
     return (
         '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         ' style="margin:10px 0;">'
@@ -162,7 +162,7 @@ def _html_history_separator(room: str) -> str:
     )
 
 def _html_system(message: str, color: str = TEXT_MUTED) -> str:
-    """Inline system message (errors, status)."""
+    # Inline system message (errors, status).
     return (
         '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         ' style="margin:4px 0;">'
@@ -175,7 +175,7 @@ def _html_system(message: str, color: str = TEXT_MUTED) -> str:
     )
 
 def _html_pm_out(message: str, timestamp: str) -> str:
-    """Outgoing PM bubble — right-aligned, purple tint (own sent PM)."""
+    # Outgoing PM bubble — right-aligned, purple tint (own sent PM).
     ts  = _fmt_ts(timestamp)
     msg = _escape(message)
     return (
@@ -200,7 +200,7 @@ def _html_pm_out(message: str, timestamp: str) -> str:
     )
 
 class _MsgInput(QTextEdit):
-    """QTextEdit that emits send_triggered on Enter (Shift+Enter = newline)."""
+    # QTextEdit that emits send_triggered on Enter (Shift+Enter = newline).
 
     def __init__(self, on_send_callback, parent=None) -> None:
         super().__init__(parent)
@@ -219,7 +219,7 @@ class _MsgInput(QTextEdit):
 # MainWindow
 
 class MainWindow(QMainWindow):
-    """3-panel main chat window wired to NetworkClient signals."""
+    # 3-panel main chat window wired to NetworkClient signals.
 
     def __init__(self, network: NetworkClient, username: str) -> None:
         super().__init__()
@@ -577,7 +577,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _append_to_chat(self, html: str) -> None:
-        """Store HTML in current room's log then reload display."""
+        # Store HTML in current room's log then reload display.
         room = self._current_room or ""
         if room not in self._room_logs:
             self._room_logs[room] = []
@@ -589,7 +589,7 @@ class MainWindow(QMainWindow):
         sb.setValue(sb.maximum())
 
     def _store_and_show(self, room: str, html: str) -> None:
-        """Store HTML in the room log; show it if it's the current room."""
+        # Store HTML in the room log; show it if it's the current room.
         if room not in self._room_logs:
             self._room_logs[room] = []
         self._room_logs[room].append(html)
@@ -601,7 +601,7 @@ class MainWindow(QMainWindow):
             self._mark_room_unread(room)
 
     def _reload_chat(self) -> None:
-        """Re-render stored HTML for current room or PM conversation."""
+        # Re-render stored HTML for current room or PM conversation.
         if self._current_pm_target:
             parts = self._pm_logs.get(self._current_pm_target, [])
         else:
@@ -641,7 +641,7 @@ class MainWindow(QMainWindow):
         self._highlight_current_room()
 
     def _refresh_room_list_ui(self) -> None:
-        """Update icons without re-fetching from server."""
+        # Update icons without re-fetching from server.
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             name = item.data(Qt.ItemDataRole.UserRole)
@@ -688,7 +688,7 @@ class MainWindow(QMainWindow):
             self._highlight_current_user(self._current_pm_target)
 
     def _highlight_current_user(self, target: str) -> None:
-        """Select the user item matching target in the user list."""
+        # Select the user item matching target in the user list.
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == target:
@@ -696,7 +696,7 @@ class MainWindow(QMainWindow):
                 return
 
     def _mark_user_unread(self, username: str) -> None:
-        """Add a blue dot indicator to a user who sent an unread PM."""
+        # Add a blue dot indicator to a user who sent an unread PM.
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == username:
@@ -705,7 +705,7 @@ class MainWindow(QMainWindow):
                 return
 
     def _store_pm(self, contact: str, html: str) -> None:
-        """Store a PM html bubble in pm_logs for `contact`."""
+        # Store a PM html bubble in pm_logs for `contact`.
         if contact not in self._pm_logs:
             self._pm_logs[contact] = []
         self._pm_logs[contact].append(html)
@@ -757,7 +757,7 @@ class MainWindow(QMainWindow):
             self._switch_to_room(room)
 
     def _switch_to_room(self, room: str, password: str = "") -> None:
-        """Join (if needed) and switch the chat display to `room`."""
+        # Join (if needed) and switch the chat display to `room`.
         self._current_pm_target = None
         self._current_room = room
         self._room_name_label.setText(f"#  {room}")
@@ -779,7 +779,7 @@ class MainWindow(QMainWindow):
         self._msg_input.setFocus()
 
     def _switch_to_pm(self, target: str) -> None:
-        """Switch the center panel to a private conversation with `target`."""
+        # Switch the center panel to a private conversation with `target`.
         self._current_pm_target = target
         self._current_room = None
         self._room_list.clearSelection()
@@ -801,7 +801,7 @@ class MainWindow(QMainWindow):
             # Room list refresh & code display handled in on_packet (room_code field).
 
     def _on_join_by_code(self) -> None:
-        """Show invite-code dialog; send join_by_code to server."""
+        # Show invite-code dialog; send join_by_code to server.
         dlg = JoinPasswordDialog(room_name="", parent=self)
         # Patch the title / hint for standalone join flow.
         dlg.setWindowTitle("Join a Room")
@@ -831,7 +831,7 @@ class MainWindow(QMainWindow):
         self._refresh_room_list_ui()
 
     def _on_pm_clicked(self) -> None:
-        """Send PM button — opens the selected user's conversation or a dialog."""
+        # Send PM button — opens the selected user's conversation or a dialog.
         selected = self._user_list.currentItem()
         target   = selected.data(Qt.ItemDataRole.UserRole) if selected else ""
         if target and target != self._username:
@@ -843,7 +843,7 @@ class MainWindow(QMainWindow):
                 self._switch_to_pm(dlg.target)
 
     def _on_user_clicked(self, item: QListWidgetItem) -> None:
-        """Single/double click on a user — open their PM conversation."""
+        # Single/double click on a user — open their PM conversation.
         target = item.data(Qt.ItemDataRole.UserRole)
         if not target or target == self._username:
             return

@@ -1,4 +1,4 @@
-"""Flow"""
+# Flow
 
 import sys
 import os
@@ -17,7 +17,7 @@ from client.gui.styles import (
 )
 
 class LoginWindow(QDialog):
-    """After exec() returns Accepted:"""
+    # After exec() returns Accepted:
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)

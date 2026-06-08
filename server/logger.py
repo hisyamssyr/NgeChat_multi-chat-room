@@ -1,4 +1,4 @@
-"""Centralised logging configuration for the Multi-Chat Room Server."""
+# Centralised logging configuration for the Multi-Chat Room Server.
 
 import logging
 import logging.handlers
@@ -34,7 +34,7 @@ _MAX_BYTES    = 5 * 1024 * 1024   # 5 MB
 _BACKUP_COUNT = 3                  # keep server.log, server.log.1, server.log.2
 
 class _ColourFormatter(logging.Formatter):
-    """Logging formatter that prepends ANSI colour codes to the level name"""
+    # Logging formatter that prepends ANSI colour codes to the level name
 
     _FMT = "{asctime}  {levelname:<8}  {name:<30}  {message}"
     _DATE_FMT = "%Y-%m-%d %H:%M:%S"
@@ -55,7 +55,7 @@ class _ColourFormatter(logging.Formatter):
         return super().format(record)
 
 def setup_logger(level: int = logging.INFO) -> None:
-    """Configure the root logger with console + rotating-file handlers."""
+    # Configure the root logger with console + rotating-file handlers.
     root = logging.getLogger()
 
     # Guard: if handlers already exist, logger was already initialised.

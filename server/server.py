@@ -1,4 +1,4 @@
-"""Multi-Chat Room Server — Main Entry Point."""
+# Multi-Chat Room Server — Main Entry Point.
 
 import socket
 import threading
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # ClientHandler — one instance per connected TCP client
 
 class ClientHandler:
-    """Manages the full lifecycle of a single client connection."""
+    # Manages the full lifecycle of a single client connection.
 
     def __init__(
         self,
@@ -56,7 +56,7 @@ class ClientHandler:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
-        """Entry point called by the spawned thread."""
+        # Entry point called by the spawned thread.
         logger.info("New connection from %s:%d", *self._addr)
         try:
             while self._running:
@@ -91,7 +91,7 @@ class ClientHandler:
     # ------------------------------------------------------------------
 
     def _handle_packet(self, packet: dict) -> None:
-        """Validate and dispatch a single incoming packet to the correct"""
+        # Validate and dispatch a single incoming packet to the correct
         try:
             ptype = validate_packet(packet)
         except PacketError as exc:
@@ -125,7 +125,7 @@ class ClientHandler:
     # ------------------------------------------------------------------
 
     def _require_login(self) -> bool:
-        """Send an error if not authenticated."""
+        # Send an error if not authenticated.
         if self._username is None:
             send_packet(
                 self._sock,
@@ -440,7 +440,7 @@ class ClientHandler:
     # ------------------------------------------------------------------
 
     def _cleanup(self) -> None:
-        """Remove the user from the online list and notify all their rooms."""
+        # Remove the user from the online list and notify all their rooms.
         if self._username:
             # Capture rooms before removing the user.
             user_rooms = self._rooms.get_user_rooms(self._username)
@@ -472,7 +472,7 @@ class ClientHandler:
 # ChatServer — accept loop
 
 class ChatServer:
-    """TCP server that accepts connections and spawns ClientHandler threads."""
+    # TCP server that accepts connections and spawns ClientHandler threads.
 
     def __init__(
         self,
@@ -492,7 +492,7 @@ class ChatServer:
     # ------------------------------------------------------------------
 
     def start(self) -> None:
-        """Initialise the database, bind the TCP socket, and enter the"""
+        # Initialise the database, bind the TCP socket, and enter the
         self._db.initialise()
 
         self._server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -515,7 +515,7 @@ class ChatServer:
         self._accept_loop()
 
     def stop(self) -> None:
-        """Gracefully stop the server."""
+        # Gracefully stop the server.
         logger.info("Server shutting down…")
         self._running = False
         if self._server_sock:
@@ -531,7 +531,7 @@ class ChatServer:
     # ------------------------------------------------------------------
 
     def _accept_loop(self) -> None:
-        """Blocking loop: accept new connections and spawn ClientHandler threads."""
+        # Blocking loop: accept new connections and spawn ClientHandler threads.
         while self._running:
             try:
                 client_sock, client_addr = self._server_sock.accept()

@@ -1,4 +1,4 @@
-"""GUI entry point for the Multi-Chat Room application."""
+# GUI entry point for the Multi-Chat Room application.
 
 import sys
 import os
