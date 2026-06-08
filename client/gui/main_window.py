@@ -256,6 +256,8 @@ class MainWindow(QMainWindow):
         root.setSpacing(0)
 
         root.addWidget(self._build_title_bar())
+        self._notif_bar = self._build_notif_bar()
+        root.addWidget(self._notif_bar)
         root.addWidget(self._build_body(), stretch=1)
         root.addWidget(self._build_input_bar())
 
@@ -302,6 +304,44 @@ class MainWindow(QMainWindow):
         h.addWidget(logout_btn)
 
         return bar
+
+    def _build_notif_bar(self) -> QFrame:
+        # Inline notification bar for friend requests (hidden by default).
+        bar = QFrame()
+        bar.setObjectName("notif_bar")
+        bar.setFixedHeight(44)
+        bar.setStyleSheet(
+            "#notif_bar { background:#1f3a2d; border-bottom:1px solid #2ea043; }"
+        )
+        bar.hide()
+
+        h = QHBoxLayout(bar)
+        h.setContentsMargins(16, 0, 16, 0)
+        h.setSpacing(10)
+
+        self._notif_label = QLabel()
+        self._notif_label.setStyleSheet("color:#3fb950; font-size:13px;")
+        h.addWidget(self._notif_label, stretch=1)
+
+        self._notif_accept_btn = QPushButton("Accept")
+        self._notif_accept_btn.setObjectName("send_btn")
+        self._notif_accept_btn.setFixedSize(80, 28)
+
+        self._notif_decline_btn = QPushButton("Decline")
+        self._notif_decline_btn.setObjectName("danger_btn")
+        self._notif_decline_btn.setFixedSize(80, 28)
+
+        self._notif_dismiss_btn = QPushButton("✕")
+        self._notif_dismiss_btn.setObjectName("icon_btn")
+        self._notif_dismiss_btn.setFixedSize(28, 28)
+        self._notif_dismiss_btn.clicked.connect(self._dismiss_notif)
+
+        h.addWidget(self._notif_accept_btn)
+        h.addWidget(self._notif_decline_btn)
+        h.addWidget(self._notif_dismiss_btn)
+
+        return bar
+
 
     def _build_body(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -578,6 +618,11 @@ class MainWindow(QMainWindow):
             self._populate_friend_list(friends)
             return
 
+        if ptype == "friend_request":
+            from_user = packet.get("from", "?")
+            self._show_friend_request_notif(from_user)
+            return
+
         if ptype == "user_list":
             # Legacy — ignored now that friends list is used
             return
@@ -733,6 +778,39 @@ class MainWindow(QMainWindow):
         self._pm_logs[contact].append(html)
         if contact == self._current_pm_target:
             self._reload_chat()
+
+    # ------------------------------------------------------------------
+    # Friend request notification
+    # ------------------------------------------------------------------
+
+    def _show_friend_request_notif(self, from_user: str) -> None:
+        # Show the green notification bar with Accept/Decline for a request.
+        self._notif_label.setText(f"👤  Friend request from  {from_user}")
+
+        # Disconnect any previous signals to avoid stacking
+        try:
+            self._notif_accept_btn.clicked.disconnect()
+            self._notif_decline_btn.clicked.disconnect()
+        except RuntimeError:
+            pass
+
+        self._notif_accept_btn.clicked.connect(
+            lambda: self._respond_friend_request(from_user, accept=True)
+        )
+        self._notif_decline_btn.clicked.connect(
+            lambda: self._respond_friend_request(from_user, accept=False)
+        )
+        self._notif_bar.show()
+
+    def _respond_friend_request(self, from_user: str, accept: bool) -> None:
+        if accept:
+            self._network.send_accept_friend(from_user)
+        else:
+            self._network.send_decline_friend(from_user)
+        self._notif_bar.hide()
+
+    def _dismiss_notif(self) -> None:
+        self._notif_bar.hide()
 
     # ------------------------------------------------------------------
     # Button / action handlers

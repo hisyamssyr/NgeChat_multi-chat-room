@@ -24,6 +24,7 @@ from server.protocol    import (
     make_room_list_packet,
     make_user_list_packet,
     make_friend_list_packet,
+    make_friend_request_push,
 )
 
 HOST        = os.environ.get("CHAT_HOST", "0.0.0.0")
@@ -120,6 +121,8 @@ class ClientHandler:
             "add_friend":      self._handle_add_friend,
             "remove_friend":   self._handle_remove_friend,
             "get_friends":     self._handle_get_friends,
+            "accept_friend":   self._handle_accept_friend,
+            "decline_friend":  self._handle_decline_friend,
         }
         handler = dispatch.get(ptype)
         if handler:
@@ -487,14 +490,40 @@ class ClientHandler:
         self._send_friend_list_to(self._username)
 
     def _handle_add_friend(self, packet: dict) -> None:
+        # Send a friend request — goes into 'pending' state.
         if not self._require_login():
             return
         target = packet["target"].strip()
-        ok, msg = self._db.add_friend(self._username, target)
+        ok, msg = self._db.send_friend_request(self._username, target)
         if ok:
             self._send_ok(msg)
-            # Refresh the requester's friend list.
+            # If target is online, push them the friend request notification.
+            target_sock = self._rooms.get_socket(target)
+            if target_sock:
+                send_packet(target_sock, make_friend_request_push(self._username))
+        else:
+            self._send_err(msg)
+
+    def _handle_accept_friend(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        requester = packet["target"].strip()  # the one who originally sent the request
+        ok, msg = self._db.accept_friend_request(self._username, requester)
+        if ok:
+            self._send_ok(msg)
+            # Refresh both users' friend lists
             self._send_friend_list_to(self._username)
+            self._send_friend_list_to(requester)
+        else:
+            self._send_err(msg)
+
+    def _handle_decline_friend(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        requester = packet["target"].strip()
+        ok, msg = self._db.decline_friend_request(self._username, requester)
+        if ok:
+            self._send_ok(msg)
         else:
             self._send_err(msg)
 
@@ -506,6 +535,8 @@ class ClientHandler:
         if ok:
             self._send_ok(msg)
             self._send_friend_list_to(self._username)
+            # Also refresh the other person's list
+            self._send_friend_list_to(target)
         else:
             self._send_err(msg)
 

@@ -121,6 +121,7 @@ class Database:
                 CREATE TABLE IF NOT EXISTS friends (
                     username TEXT NOT NULL,
                     friend   TEXT NOT NULL,
+                    status   TEXT NOT NULL DEFAULT 'pending',
                     added_at TEXT NOT NULL,
                     PRIMARY KEY (username, friend)
                 );
@@ -133,9 +134,11 @@ class Database:
                 """CREATE TABLE IF NOT EXISTS friends (
                     username TEXT NOT NULL,
                     friend   TEXT NOT NULL,
+                    status   TEXT NOT NULL DEFAULT 'pending',
                     added_at TEXT NOT NULL,
                     PRIMARY KEY (username, friend)
                 )""",
+                "ALTER TABLE friends ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'",
                 # Drop old password_hash col: SQLite doesn’t support DROP COLUMN
                 # before 3.35, so we just ignore it if it exists.
             ]
@@ -473,61 +476,119 @@ class Database:
                 for r in rows
             ]
 
-    # ------------------------------------------------------------------
-    # Friend operations
-    # ------------------------------------------------------------------
-
-    def add_friend(self, username: str, friend: str) -> tuple[bool, str]:
-        # Add `friend` to `username`'s friend list.
+    def send_friend_request(self, username: str, friend: str) -> tuple[bool, str]:
+        # Create a pending friend request from `username` to `friend`.
         if username == friend:
             return False, "You cannot add yourself as a friend."
         if not self.user_exists(friend):
             return False, f"User '{friend}' does not exist."
         now = self._now_utc()
         with self._lock:
+            # Check if a request already exists in either direction
+            row = self._conn.execute(
+                "SELECT status FROM friends WHERE (username = ? AND friend = ?)"
+                " OR (username = ? AND friend = ?)",
+                (username, friend, friend, username),
+            ).fetchone()
+            if row:
+                if row["status"] == "accepted":
+                    return False, f"You are already friends with '{friend}'."
+                return False, f"A friend request with '{friend}' already exists."
             try:
                 self._conn.execute(
-                    "INSERT INTO friends (username, friend, added_at) VALUES (?, ?, ?)",
+                    "INSERT INTO friends (username, friend, status, added_at)"
+                    " VALUES (?, ?, 'pending', ?)",
                     (username, friend, now),
                 )
                 self._conn.commit()
-                return True, f"'{friend}' added to your friends."
+                return True, f"Friend request sent to '{friend}'."
             except sqlite3.IntegrityError:
-                return False, f"'{friend}' is already in your friends list."
+                return False, f"A friend request already exists."
             except sqlite3.Error as exc:
-                logger.error("add_friend DB error: %s", exc)
+                logger.error("send_friend_request DB error: %s", exc)
                 return False, "Database error."
 
-    def remove_friend(self, username: str, friend: str) -> tuple[bool, str]:
-        # Remove `friend` from `username`'s friend list.
+    def accept_friend_request(self, username: str, requester: str) -> tuple[bool, str]:
+        # Accept a pending request from `requester` to `username`.
+        now = self._now_utc()
         with self._lock:
+            row = self._conn.execute(
+                "SELECT status FROM friends WHERE username = ? AND friend = ?",
+                (requester, username),
+            ).fetchone()
+            if not row or row["status"] != "pending":
+                return False, f"No pending request from '{requester}'."
             try:
-                cur = self._conn.execute(
-                    "DELETE FROM friends WHERE username = ? AND friend = ?",
-                    (username, friend),
+                # Mark the request as accepted
+                self._conn.execute(
+                    "UPDATE friends SET status = 'accepted' WHERE username = ? AND friend = ?",
+                    (requester, username),
+                )
+                # Add the reverse entry so both sides see each other
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO friends (username, friend, status, added_at)"
+                    " VALUES (?, ?, 'accepted', ?)",
+                    (username, requester, now),
                 )
                 self._conn.commit()
-                if cur.rowcount == 0:
-                    return False, f"'{friend}' is not in your friends list."
+                return True, f"You are now friends with '{requester}'."
+            except sqlite3.Error as exc:
+                logger.error("accept_friend_request DB error: %s", exc)
+                return False, "Database error."
+
+    def decline_friend_request(self, username: str, requester: str) -> tuple[bool, str]:
+        # Decline/cancel a pending request from `requester` to `username`.
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM friends WHERE username = ? AND friend = ? AND status = 'pending'",
+                (requester, username),
+            )
+            self._conn.commit()
+            if cur.rowcount == 0:
+                return False, f"No pending request from '{requester}'."
+            return True, f"Friend request from '{requester}' declined."
+
+    def remove_friend(self, username: str, friend: str) -> tuple[bool, str]:
+        # Remove an accepted friendship (both directions).
+        with self._lock:
+            try:
+                self._conn.execute(
+                    "DELETE FROM friends WHERE (username = ? AND friend = ?)"
+                    " OR (username = ? AND friend = ?)",
+                    (username, friend, friend, username),
+                )
+                self._conn.commit()
                 return True, f"'{friend}' removed from your friends."
             except sqlite3.Error as exc:
                 logger.error("remove_friend DB error: %s", exc)
                 return False, "Database error."
 
     def get_friends(self, username: str) -> list[str]:
-        # Return sorted list of friend usernames for `username`.
+        # Return accepted friends for `username`.
         with self._lock:
             rows = self._conn.execute(
-                "SELECT friend FROM friends WHERE username = ? ORDER BY friend ASC",
+                "SELECT friend FROM friends WHERE username = ? AND status = 'accepted'"
+                " ORDER BY friend ASC",
+                (username,),
+            ).fetchall()
+            return [r["friend"] for r in rows]
+
+    def get_pending_sent(self, username: str) -> list[str]:
+        # Return usernames to whom `username` sent pending requests.
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT friend FROM friends WHERE username = ? AND status = 'pending'"
+                " ORDER BY friend ASC",
                 (username,),
             ).fetchall()
             return [r["friend"] for r in rows]
 
     def is_friend(self, username: str, friend: str) -> bool:
-        # Return True if `friend` is in `username`'s friend list.
+        # Return True if the two users are accepted friends.
         with self._lock:
             row = self._conn.execute(
-                "SELECT 1 FROM friends WHERE username = ? AND friend = ?",
+                "SELECT 1 FROM friends WHERE username = ? AND friend = ? AND status = 'accepted'",
                 (username, friend),
             ).fetchone()
             return row is not None
+

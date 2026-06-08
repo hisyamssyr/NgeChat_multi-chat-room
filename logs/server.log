@@ -692,3 +692,51 @@ TypeError: execute() argument 1 must be str, not tuple
 2026-06-08 20:14:06  INFO      __main__                        Client 127.0.0.1:55696 disconnected.
 2026-06-08 20:14:06  INFO      server.room_manager             User went offline: tes1 (was in rooms: [])
 2026-06-08 20:14:06  INFO      __main__                        Cleaned up session for 'tes1' (was in: []).
+2026-06-09 06:23:30  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-09 06:23:30  INFO      server.database                 DB migration applied: CREATE TABLE IF NOT EXISTS friends (
+                    use
+2026-06-09 06:23:30  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-09 06:23:30  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-09 06:23:48  INFO      __main__                        New connection from 127.0.0.1:64492
+2026-06-09 06:23:48  INFO      server.room_manager             User came online: tes1
+2026-06-09 06:23:48  INFO      __main__                        User logged in: tes1 from 127.0.0.1:64492
+2026-06-09 06:24:33  INFO      __main__                        New connection from 127.0.0.1:51530
+2026-06-09 06:24:33  INFO      server.room_manager             User came online: tes2
+2026-06-09 06:24:33  INFO      __main__                        User logged in: tes2 from 127.0.0.1:51530
+2026-06-09 06:24:59  INFO      __main__                        Client 127.0.0.1:51530 disconnected.
+2026-06-09 06:24:59  INFO      server.room_manager             User went offline: tes2 (was in rooms: [])
+2026-06-09 06:24:59  INFO      __main__                        Cleaned up session for 'tes2' (was in: []).
+2026-06-09 06:25:23  INFO      __main__                        New connection from 127.0.0.1:53243
+2026-06-09 06:25:23  INFO      server.room_manager             User came online: tes2
+2026-06-09 06:25:23  INFO      __main__                        User logged in: tes2 from 127.0.0.1:53243
+2026-06-09 06:25:29  INFO      __main__                        Private message: 'tes1' → 'tes2': hay
+2026-06-09 06:25:37  INFO      server.room_manager             'tes2' joined room 'room_tes2'
+2026-06-09 06:25:37  INFO      __main__                        'tes2' joined room 'room_tes2'.
+2026-06-09 06:25:47  INFO      __main__                        'tes1' joined room 'room_tes2' via invite code.
+2026-06-09 06:25:47  INFO      server.room_manager             'tes1' joined room 'room_tes2'
+2026-06-09 06:25:57  INFO      __main__                        Broadcast in 'room_tes2' by 'tes1': hay
+2026-06-09 06:26:33  INFO      __main__                        New connection from 127.0.0.1:56803
+2026-06-09 06:26:33  INFO      server.database                 New user registered: tes3
+2026-06-09 06:26:33  INFO      __main__                        Registered new user: tes3
+2026-06-09 06:26:33  INFO      server.room_manager             User came online: tes3
+2026-06-09 06:26:33  INFO      __main__                        User logged in: tes3 from 127.0.0.1:56803
+2026-06-09 06:27:33  INFO      __main__                        Private message: 'tes1' → 'tes3': hi
+2026-06-09 06:27:38  INFO      __main__                        Private message: 'tes2' → 'tes3': hi
+2026-06-09 06:27:49  INFO      __main__                        'tes3' joined room 'room_tes2' via invite code.
+2026-06-09 06:27:49  INFO      server.room_manager             'tes3' joined room 'room_tes2'
+2026-06-09 06:27:52  INFO      __main__                        Broadcast in 'room_tes2' by 'tes3': hihi
+2026-06-09 06:28:04  INFO      __main__                        Broadcast in 'room_tes2' by 'tes1': hihi
+2026-06-09 06:28:15  INFO      __main__                        Broadcast in 'room_tes2' by 'tes2': hihe
+2026-06-09 06:28:41  INFO      __main__                        Client 127.0.0.1:53243 disconnected.
+2026-06-09 06:28:41  INFO      server.room_manager             User went offline: tes2 (was in rooms: ['room_tes2'])
+2026-06-09 06:28:41  INFO      __main__                        Cleaned up session for 'tes2' (was in: ['room_tes2']).
+2026-06-09 06:28:42  INFO      __main__                        Client 127.0.0.1:64492 disconnected.
+2026-06-09 06:28:42  INFO      server.room_manager             User went offline: tes1 (was in rooms: ['room_tes2'])
+2026-06-09 06:28:42  INFO      __main__                        Cleaned up session for 'tes1' (was in: ['room_tes2']).
+2026-06-09 06:28:43  INFO      __main__                        Client 127.0.0.1:56803 disconnected.
+2026-06-09 06:28:43  INFO      server.room_manager             User went offline: tes3 (was in rooms: ['room_tes2'])
+2026-06-09 06:28:43  INFO      __main__                        Cleaned up session for 'tes3' (was in: ['room_tes2']).

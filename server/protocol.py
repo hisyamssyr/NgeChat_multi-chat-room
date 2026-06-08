@@ -30,6 +30,8 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "add_friend":     ["target"],
     "remove_friend":  ["target"],
     "get_friends":    [],
+    "accept_friend":  ["target"],
+    "decline_friend": ["target"],
 }
 
 def send_packet(sock, data: dict) -> bool:
@@ -152,6 +154,13 @@ def make_friend_list_packet(friends: list[dict]) -> dict:
     return {
         "type":    "friend_list",
         "friends": friends,
+    }
+
+def make_friend_request_push(from_user: str) -> dict:
+    # Push to target: you have a pending friend request from `from_user`.
+    return {
+        "type":    "friend_request",
+        "from":    from_user,
     }
 
 class PacketError(Exception):
