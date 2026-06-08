@@ -1,14 +1,4 @@
-"""
-client/gui/dialogs.py
----------------------
-Reusable modal dialogs for the Multi-Chat Room GUI.
-
-Dialogs
--------
-CreateRoomDialog  — ask for a room name; returns the name on accept.
-PrivateMsgDialog  — ask for target username + message text.
-LeaveRoomDialog   — confirm before leaving a room.
-"""
+"""Reusable modal dialogs for the Multi-Chat Room GUI."""
 
 import sys
 import os
@@ -22,7 +12,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
 from client.gui.styles import BG_SURFACE, BLUE, TEXT_MUTED
-
 
 class _BaseDialog(QDialog):
     """Shared base with standard button row and OK/Cancel logic."""
@@ -66,22 +55,10 @@ class _BaseDialog(QDialog):
         lbl.setObjectName("field_label")
         return lbl
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # CreateRoomDialog
-# ─────────────────────────────────────────────────────────────────────────────
 
 class CreateRoomDialog(_BaseDialog):
-    """
-    Dialog to create a new chat room.
-    The server auto-generates an invite code — no password field needed here.
-
-    Usage
-    -----
-        dlg = CreateRoomDialog(parent=self)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            room_name = dlg.room_name
-    """
+    """Dialog to create a new chat room."""
 
     def __init__(self, parent=None) -> None:
         super().__init__("Create New Room", parent)
@@ -132,27 +109,10 @@ class CreateRoomDialog(_BaseDialog):
         self.room_name = name
         self.accept()
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # PrivateMsgDialog
-# ─────────────────────────────────────────────────────────────────────────────
 
 class PrivateMsgDialog(_BaseDialog):
-    """
-    Dialog to compose a private message.
-
-    Parameters
-    ----------
-    prefill_target : if provided, the target field is pre-filled
-                     and disabled (e.g. when right-clicking a user).
-
-    Usage
-    -----
-        dlg = PrivateMsgDialog(prefill_target="bob", parent=self)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            target  = dlg.target
-            message = dlg.message
-    """
+    """Dialog to compose a private message."""
 
     def __init__(self, prefill_target: str = "", parent=None) -> None:
         super().__init__("Send Private Message", parent)
@@ -225,21 +185,10 @@ class PrivateMsgDialog(_BaseDialog):
         self.message = message
         self.accept()
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # JoinPasswordDialog
-# ─────────────────────────────────────────────────────────────────────────────
 
 class JoinPasswordDialog(_BaseDialog):
-    """
-    Dialog shown when joining a room that requires an invite code.
-
-    Usage
-    -----
-        dlg = JoinPasswordDialog(room_name="secret", parent=self)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            code = dlg.password
-    """
+    """Dialog shown when joining a room that requires an invite code."""
 
     def __init__(self, room_name: str, parent=None) -> None:
         super().__init__("Invite Code Required", parent)
@@ -310,21 +259,10 @@ class JoinPasswordDialog(_BaseDialog):
         self.password = code
         self.accept()
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # RoomCodeDialog
-# ─────────────────────────────────────────────────────────────────────────────
 
 class RoomCodeDialog(_BaseDialog):
-    """
-    Shown to the room creator immediately after the room is created.
-    Displays the auto-generated invite code with a copy-to-clipboard button.
-
-    Usage
-    -----
-        dlg = RoomCodeDialog(room_name="Gaming", code="A3BX92ZK", parent=self)
-        dlg.exec()   # user just reads it; no input needed
-    """
+    """Shown to the room creator immediately after the room is created."""
 
     def __init__(self, room_name: str, code: str, parent=None) -> None:
         super().__init__("🎉  Room Created!", parent)

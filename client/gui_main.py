@@ -1,19 +1,4 @@
-"""
-client/gui_main.py
-------------------
-GUI entry point for the Multi-Chat Room application.
-
-Launches the login dialog first. On successful authentication,
-opens the main 3-panel chat window.
-
-Usage
------
-    python -m client.gui_main                             # default server
-    python -m client.gui_main --host 192.168.1.5 --port 9090
-
-The original CLI client is completely preserved:
-    python -m client.client
-"""
+"""GUI entry point for the Multi-Chat Room application."""
 
 import sys
 import os
@@ -34,7 +19,6 @@ from client.gui.main_window import MainWindow
 # Suppress networking debug noise on the GUI client.
 logging.basicConfig(level=logging.WARNING)
 
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Multi-Chat Room — GUI Client",
@@ -50,7 +34,6 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # ── Create QApplication ───────────────────────────────────────────
     app = QApplication(sys.argv)
     app.setApplicationName("Multi-Chat Room")
     app.setOrganizationName("NetworkProgramming")
@@ -65,7 +48,6 @@ def main() -> None:
     font = QFont("Segoe UI", 10)
     app.setFont(font)
 
-    # ── Show login dialog ─────────────────────────────────────────────
     login_win = LoginWindow()
 
     # Pre-fill host/port from CLI args.
@@ -78,7 +60,6 @@ def main() -> None:
         # User closed the login dialog — exit cleanly.
         sys.exit(0)
 
-    # ── Open main window ──────────────────────────────────────────────
     network  = login_win.network_client
     username = login_win.username
 
@@ -86,7 +67,6 @@ def main() -> None:
     main_win.show()
 
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()

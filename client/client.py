@@ -1,45 +1,4 @@
-"""
-client/client.py
-----------------
-Multi-Chat Room Client — Command Line Interface.
-
-Architecture
-------------
-  Main Thread:
-    • Connects to the server via TCP.
-    • Reads user input from stdin in a blocking loop.
-    • Parses commands and sends the appropriate JSON packet.
-
-  Receiver Thread (daemon):
-    • Runs concurrently with the main thread.
-    • Calls recv_packet() in a loop — blocks until a packet arrives.
-    • Prints all server responses and push messages to the terminal.
-    • Sets a threading.Event(_stop_event) when the server closes the
-      connection so the main thread can exit cleanly.
-
-"Current room" context:
-    The client tracks one active room (_current_room).  Once you join
-    a room, plain text input (not starting with '/') is sent as a
-    broadcast to that room.  Use /join <room> to switch rooms.
-
-Commands
---------
-    /register <username> <password>  — Create a new account
-    /login    <username> <password>  — Log in
-    /logout                          — Log out and keep the client open
-    /create   <room>                 — Create a new chat room
-    /join     <room>                 — Join a room (sets current room)
-    /leave    [room]                 — Leave a room (defaults to current)
-    /rooms                           — List all rooms
-    /users                           — List online users
-    /pm       <username> <message>   — Send a private message
-    /room     <room>                 — Switch active room without re-joining
-    /help                            — Show this help text
-    /quit  or  /exit                 — Disconnect and exit
-
-Typing any text NOT starting with '/' sends it as a broadcast
-to the currently active room.
-"""
+"""Multi-Chat Room Client — Command Line Interface."""
 
 import socket
 import threading
@@ -47,7 +6,6 @@ import sys
 import os
 import logging
 
-# ── Ensure the project root is on sys.path so `client.protocol` resolves ─────
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from client.protocol import (
@@ -65,13 +23,11 @@ from client.protocol import (
     build_get_users,
 )
 
-# ── Configuration ─────────────────────────────────────────────────────────────
 DEFAULT_HOST = os.environ.get("CHAT_HOST", "127.0.0.1")
 DEFAULT_PORT = int(os.environ.get("CHAT_PORT", "9090"))
 
 logging.basicConfig(level=logging.WARNING)   # suppress debug noise on the client
 
-# ── ANSI colour helpers ───────────────────────────────────────────────────────
 _IS_TTY = sys.stdout.isatty()
 
 def _c(code: str, text: str) -> str:
@@ -87,38 +43,12 @@ def _bold(t):    return _c("1",     t)
 def _grey(t):    return _c("38;5;240", t)
 def _blue(t):    return _c("34",    t)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # ChatClient
-# ─────────────────────────────────────────────────────────────────────────────
 
 class ChatClient:
-    """
-    Manages the connection to the server and the CLI interaction loop.
-    """
+    """Manages the connection to the server and the CLI interaction loop."""
 
-    HELP_TEXT = """
-╔══════════════════════════════════════════════════════════════╗
-║              Multi-Chat Room — Command Reference             ║
-╠══════════════════════════════════════════════════════════════╣
-║  /register <user> <pass>   Create a new account              ║
-║  /login    <user> <pass>   Log in to your account            ║
-║  /logout                   Log out (keeps client open)       ║
-╠══════════════════════════════════════════════════════════════╣
-║  /create <room>            Create a new chat room            ║
-║  /join   <room>            Join a room (sets active room)    ║
-║  /leave  [room]            Leave a room (default: active)    ║
-║  /room   <room>            Switch active room context        ║
-╠══════════════════════════════════════════════════════════════╣
-║  /rooms                    List all available rooms          ║
-║  /users                    List online users                 ║
-║  /pm <user> <message>      Send a private message            ║
-╠══════════════════════════════════════════════════════════════╣
-║  <text>                    Broadcast to active room          ║
-║  /help                     Show this help text               ║
-║  /quit  or  /exit          Disconnect and exit               ║
-╚══════════════════════════════════════════════════════════════╝
-"""
+    HELP_TEXT = """╔══════════════════════════════════════════════════════════════╗"""
 
     def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> None:
         self._host         = host
@@ -134,10 +64,7 @@ class ChatClient:
     # ------------------------------------------------------------------
 
     def connect(self) -> bool:
-        """
-        Establish a TCP connection to the server.
-        Returns True on success, False on failure.
-        """
+        """Establish a TCP connection to the server."""
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.connect((self._host, self._port))
@@ -165,10 +92,7 @@ class ChatClient:
     # ------------------------------------------------------------------
 
     def _receiver_loop(self) -> None:
-        """
-        Daemon thread: reads packets from the server and renders them.
-        Exits when the connection drops or _stop_event is set.
-        """
+        """Daemon thread: reads packets from the server and renders them."""
         while not self._stop_event.is_set():
             packet = recv_packet(self._sock)
 
@@ -185,15 +109,10 @@ class ChatClient:
             self._render_packet(packet)
 
     def _render_packet(self, packet: dict) -> None:
-        """
-        Format and print a single server packet.
-        All output from this thread is prefixed with a newline so it
-        does not collide mid-line with the input prompt.
-        """
+        """Format and print a single server packet."""
         ptype  = packet.get("type")
         status = packet.get("status")
 
-        # ── Standard request/response ─────────────────────────────────
         if status == "ok":
             msg = packet.get("message", "OK")
             print(f"\n{_green('✓')} {msg}")
@@ -204,7 +123,6 @@ class ChatClient:
             print(f"\n{_red('✗')} {msg}")
             return
 
-        # ── Room broadcast push ───────────────────────────────────────
         if ptype == "broadcast":
             room      = packet.get("room", "?")
             sender    = packet.get("sender", "?")
@@ -216,7 +134,6 @@ class ChatClient:
             print(f"\n{ts_str} {room_tag} {name_tag}: {message}")
             return
 
-        # ── Private message push ──────────────────────────────────────
         if ptype == "private_message":
             sender    = packet.get("sender", "?")
             message   = packet.get("message", "")
@@ -225,14 +142,12 @@ class ChatClient:
             print(f"\n{ts_str} {_magenta('📩 [PM]')} {_bold(sender)}: {message}")
             return
 
-        # ── Notification push (join / leave / disconnect) ─────────────
         if ptype == "notification":
             room    = packet.get("room", "?")
             message = packet.get("message", "")
             print(f"\n{_grey(f'── [{room}] {message} ──')}")
             return
 
-        # ── Room history (on join) ────────────────────────────────────
         if ptype == "history":
             messages = packet.get("messages", [])
             if not messages:
@@ -247,7 +162,6 @@ class ChatClient:
             print(_grey(f"  {'─' * 49}"))
             return
 
-        # ── Room list ─────────────────────────────────────────────────
         if ptype == "room_list":
             rooms = packet.get("rooms", [])
             if not rooms:
@@ -261,7 +175,6 @@ class ChatClient:
             print(_blue(f"  {'─' * 50}"))
             return
 
-        # ── User list ─────────────────────────────────────────────────
         if ptype == "user_list":
             users = packet.get("users", [])
             if not users:
@@ -273,7 +186,6 @@ class ChatClient:
             print(_blue(f"  {'─' * 50}"))
             return
 
-        # ── Unknown packet type ───────────────────────────────────────
         print(_grey(f"\n  [server] {packet}"))
 
     # ------------------------------------------------------------------
@@ -281,16 +193,11 @@ class ChatClient:
     # ------------------------------------------------------------------
 
     def _parse_and_send(self, line: str) -> bool:
-        """
-        Parse a user input line and send the corresponding packet.
-
-        Returns False when the client should exit, True to continue.
-        """
+        """Parse a user input line and send the corresponding packet."""
         line = line.strip()
         if not line:
             return True
 
-        # ── Slash commands ────────────────────────────────────────────
         if line.startswith("/"):
             parts = line.split(maxsplit=2)
             cmd   = parts[0].lower()
@@ -399,7 +306,6 @@ class ChatClient:
             print(_red(f"Unknown command: '{cmd}'. Type /help for commands."))
             return True
 
-        # ── Plain text → broadcast to current room ────────────────────
         if self._current_room is None:
             print(_yellow(
                 "  No active room. Use /join <room> to join one first,\n"
@@ -415,14 +321,8 @@ class ChatClient:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
-        """
-        Connect to the server, start the receiver thread, and enter
-        the interactive input loop.
-        """
-        print(_bold(_cyan("""
-  ╔═══════════════════════════════════════════╗
-  ║       Multi-Chat Room Client v1.0         ║
-  ╚═══════════════════════════════════════════╝""")))
+        """Connect to the server, start the receiver thread, and enter"""
+        print(_bold(_cyan("""╔═══════════════════════════════════════════╗""")))
         print(f"  Connecting to {_cyan(self._host)}:{_cyan(str(self._port))} …")
 
         if not self.connect():
@@ -438,7 +338,6 @@ class ChatClient:
         )
         receiver.start()
 
-        # ── Input loop ────────────────────────────────────────────────
         try:
             while not self._stop_event.is_set():
                 # Build prompt showing current context.
@@ -469,19 +368,10 @@ class ChatClient:
             self.disconnect()
             print(_yellow("\n  Goodbye! 👋"))
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
-# ─────────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    """
-    Parse optional --host and --port CLI arguments, then start the client.
-
-    Usage:
-        python -m client.client
-        python -m client.client --host 192.168.1.5 --port 9090
-    """
+    """Parse optional --host and --port CLI arguments, then start the client."""
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -494,7 +384,6 @@ def main() -> None:
 
     client = ChatClient(host=args.host, port=args.port)
     client.run()
-
 
 if __name__ == "__main__":
     main()

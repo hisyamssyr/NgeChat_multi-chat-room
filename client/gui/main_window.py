@@ -1,40 +1,4 @@
-"""
-client/gui/main_window.py
--------------------------
-Main 3-panel chat window for the Multi-Chat Room GUI.
-
-Layout
-------
-  ┌─ title_bar ──────────────────────────────────────────────────────┐
-  │  🗨 Multi-Chat Room          [alice]  [↺ Refresh]  [Logout]      │
-  ├─────────────────────────────────────────────────────────────────┤
-  │ ROOMS        │ # AI                      │ ONLINE               │
-  │ ──────────── │ ─────────────────────── │ ────────────────────  │
-  │ 🟢 AI        │ messages…               │ 🟢 alice              │
-  │ 💬 Gaming    │                          │ 🟢 bob                │
-  │              │                          │ 🟢 charlie            │
-  │              │                          │                       │
-  │ [+ New Room] │                          │ [✉ Send PM]           │
-  ├──────────────┴──────────────────────────┴───────────────────────┤
-  │ [📎 File]  [🎤 Voice]   Type here…               [  Send  ▶  ] │
-  └─────────────────────────────────────────────────────────────────┘
-
-Packet handling
----------------
-NetworkClient.packet_received(dict) → on_packet(dict):
-    broadcast        → append to room message log, show if current room
-    private_message  → append PM notification to chat area
-    notification     → append system message to chat area
-    history          → prepend historical messages (on room join)
-    room_list        → repopulate left panel room list
-    user_list        → repopulate right panel user list
-    status ok/error  → update status bar
-
-Message storage
----------------
-self._room_logs : dict[str, list[str]]
-    room_name → list of HTML strings; replayed when switching rooms.
-"""
+"""Main 3-panel chat window for the Multi-Chat Room GUI."""
 
 import sys
 import os
@@ -60,16 +24,12 @@ from client.gui.styles import (
     OWN_MSG_BG, PM_BG, NOTIF_COLOR,
 )
 
-
-# ── HTML message helpers (bubble style) ──────────────────────────────────────
-
 def _fmt_ts(timestamp: str) -> str:
     """'2026-06-08 14:01:33 UTC' → '14:01'."""
     try:
         return timestamp.split(" ")[1][:5]
     except Exception:
         return ""
-
 
 def _escape(text: str) -> str:
     """HTML-escape user text and convert newlines to <br/>."""
@@ -80,7 +40,6 @@ def _escape(text: str) -> str:
             .replace("\n", "<br/>")
     )
 
-
 def _html_broadcast(sender: str, message: str, timestamp: str,
                     is_own: bool) -> str:
     """WhatsApp-style chat bubble — right for own, left for others."""
@@ -88,7 +47,6 @@ def _html_broadcast(sender: str, message: str, timestamp: str,
     msg = _escape(message)
 
     if is_own:
-        # ── Right-aligned bubble (own message) ───────────────────────
         return (
             '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             ' style="margin:3px 0;">'
@@ -111,7 +69,6 @@ def _html_broadcast(sender: str, message: str, timestamp: str,
             '</table>'
         )
     else:
-        # ── Left-aligned bubble (other user) ─────────────────────────
         return (
             '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             ' style="margin:3px 0;">'
@@ -134,7 +91,6 @@ def _html_broadcast(sender: str, message: str, timestamp: str,
             '</tr>'
             '</table>'
         )
-
 
 def _html_private(sender: str, message: str, timestamp: str) -> str:
     """Purple bubble for incoming private messages."""
@@ -165,7 +121,6 @@ def _html_private(sender: str, message: str, timestamp: str) -> str:
         '</table>'
     )
 
-
 def _html_notification(message: str) -> str:
     """Centered system notification (join / leave / disconnect)."""
     msg = _escape(message)
@@ -187,7 +142,6 @@ def _html_notification(message: str) -> str:
         '</table>'
     )
 
-
 def _html_history_separator(room: str) -> str:
     """Divider shown above history messages on room join."""
     return (
@@ -207,7 +161,6 @@ def _html_history_separator(room: str) -> str:
         '</table>'
     )
 
-
 def _html_system(message: str, color: str = TEXT_MUTED) -> str:
     """Inline system message (errors, status)."""
     return (
@@ -220,7 +173,6 @@ def _html_system(message: str, color: str = TEXT_MUTED) -> str:
         '</tr>'
         '</table>'
     )
-
 
 def _html_pm_out(message: str, timestamp: str) -> str:
     """Outgoing PM bubble — right-aligned, purple tint (own sent PM)."""
@@ -247,9 +199,6 @@ def _html_pm_out(message: str, timestamp: str) -> str:
         '</table>'
     )
 
-
-# ── Custom QTextEdit for message input (Enter to send) ───────────────────────
-
 class _MsgInput(QTextEdit):
     """QTextEdit that emits send_triggered on Enter (Shift+Enter = newline)."""
 
@@ -267,10 +216,7 @@ class _MsgInput(QTextEdit):
         else:
             super().keyPressEvent(event)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # MainWindow
-# ─────────────────────────────────────────────────────────────────────────────
 
 class MainWindow(QMainWindow):
     """3-panel main chat window wired to NetworkClient signals."""
@@ -360,7 +306,6 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
 
-        # ── Left panel: rooms ─────────────────────────────────────────
         left = QFrame()
         left.setObjectName("left_panel")
         left.setMinimumWidth(170)
@@ -378,7 +323,6 @@ class MainWindow(QMainWindow):
         self._room_list.itemClicked.connect(self._on_room_clicked)
         lv.addWidget(self._room_list, stretch=1)
 
-        # ── Room action button (dropdown: Create / Join) ──────────────
         add_btn = QPushButton("＋  Add Room  ▾")
         add_btn.setObjectName("accent_btn")
         add_btn.setFixedHeight(34)
@@ -397,7 +341,6 @@ class MainWindow(QMainWindow):
         add_btn.setMenu(add_menu)
         lv.addWidget(add_btn)
 
-        # ── Center panel: chat ────────────────────────────────────────
         chat_frame = QFrame()
         chat_frame.setObjectName("chat_frame")
         cv = QVBoxLayout(chat_frame)
@@ -433,7 +376,6 @@ class MainWindow(QMainWindow):
         self._chat_area.setReadOnly(True)
         cv.addWidget(self._chat_area, stretch=1)
 
-        # ── Right panel: users ────────────────────────────────────────
         right = QFrame()
         right.setObjectName("right_panel")
         right.setMinimumWidth(150)
@@ -526,7 +468,6 @@ class MainWindow(QMainWindow):
         ptype  = packet.get("type")
         status = packet.get("status")
 
-        # ── Status responses (ok / error) ──────────────────────────────
         if status == "ok":
             msg       = packet.get("message", "")
             room_code = packet.get("room_code")
@@ -570,7 +511,6 @@ class MainWindow(QMainWindow):
                 self._refresh_room_list_ui()
             return
 
-        # ── Room broadcast push ────────────────────────────────────────
         if ptype == "broadcast":
             room      = packet.get("room", "")
             sender    = packet.get("sender", "?")
@@ -581,7 +521,6 @@ class MainWindow(QMainWindow):
             self._store_and_show(room, html)
             return
 
-        # ── Private message push ───────────────────────────────────────
         if ptype == "private_message":
             sender    = packet.get("sender", "?")
             message   = packet.get("message", "")
@@ -594,7 +533,6 @@ class MainWindow(QMainWindow):
                 self._mark_user_unread(sender)
             return
 
-        # ── Notification push ──────────────────────────────────────────
         if ptype == "notification":
             room    = packet.get("room", "")
             message = packet.get("message", "")
@@ -602,7 +540,6 @@ class MainWindow(QMainWindow):
             self._store_and_show(room, html)
             return
 
-        # ── Room history (on join) ─────────────────────────────────────
         if ptype == "history":
             messages = packet.get("messages", [])
             if not messages:
@@ -625,13 +562,11 @@ class MainWindow(QMainWindow):
             self._reload_chat()
             return
 
-        # ── Room list ──────────────────────────────────────────────────
         if ptype == "room_list":
             rooms = packet.get("rooms", [])
             self._populate_room_list(rooms)
             return
 
-        # ── User list ──────────────────────────────────────────────────
         if ptype == "user_list":
             users = packet.get("users", [])
             self._populate_user_list(users)
@@ -642,12 +577,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _append_to_chat(self, html: str) -> None:
-        """Store HTML in current room's log then reload display.
-
-        Using setHtml (via _reload_chat) instead of insertHtml avoids
-        the inline-flow / line-wrap corruption that insertHtml causes
-        when appending block-level table elements.
-        """
+        """Store HTML in current room's log then reload display."""
         room = self._current_room or ""
         if room not in self._room_logs:
             self._room_logs[room] = []
@@ -671,11 +601,7 @@ class MainWindow(QMainWindow):
             self._mark_room_unread(room)
 
     def _reload_chat(self) -> None:
-        """Re-render stored HTML for current room or PM conversation.
-
-        Uses setHtml so Qt gets a clean document — avoids the inline-flow
-        corruption caused by repeated insertHtml calls.
-        """
+        """Re-render stored HTML for current room or PM conversation."""
         if self._current_pm_target:
             parts = self._pm_logs.get(self._current_pm_target, [])
         else:
@@ -779,9 +705,7 @@ class MainWindow(QMainWindow):
                 return
 
     def _store_pm(self, contact: str, html: str) -> None:
-        """Store a PM html bubble in pm_logs for `contact`.
-        Shows immediately if that conversation is currently open.
-        """
+        """Store a PM html bubble in pm_logs for `contact`."""
         if contact not in self._pm_logs:
             self._pm_logs[contact] = []
         self._pm_logs[contact].append(html)
@@ -798,7 +722,6 @@ class MainWindow(QMainWindow):
             return
 
         if self._current_pm_target:
-            # ── PM mode: send private message ────────────────────────
             self._msg_input.clear()
             self._network.send_private_message(self._current_pm_target, text)
             # Store own outgoing PM locally (server doesn't echo it back).
@@ -807,7 +730,6 @@ class MainWindow(QMainWindow):
             html = _html_pm_out(text, ts)
             self._store_pm(self._current_pm_target, html)
         elif self._current_room:
-            # ── Room mode: broadcast ──────────────────────────────────
             self._msg_input.clear()
             self._network.send_broadcast(self._current_room, text)
         else:
@@ -835,10 +757,7 @@ class MainWindow(QMainWindow):
             self._switch_to_room(room)
 
     def _switch_to_room(self, room: str, password: str = "") -> None:
-        """Join (if needed) and switch the chat display to `room`.
-
-        `password` is the invite code for new members (empty for existing members).
-        """
+        """Join (if needed) and switch the chat display to `room`."""
         self._current_pm_target = None
         self._current_room = room
         self._room_name_label.setText(f"#  {room}")

@@ -1,34 +1,9 @@
-"""
-server/logger.py
-----------------
-Centralised logging configuration for the Multi-Chat Room Server.
-
-Sets up two handlers:
-  1. StreamHandler  → colourised output to the terminal (console).
-  2. RotatingFileHandler → persistent log in  logs/server.log
-     (max 5 MB per file, keeps the last 3 rotated files).
-
-Usage
------
-    from server.logger import setup_logger
-
-    # Call ONCE at server startup, before any other imports
-    # that might call logging.getLogger().
-    setup_logger(level=logging.DEBUG)   # verbose
-    setup_logger()                      # default: INFO
-
-After setup_logger() is called, every module just does:
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info("...")
-"""
+"""Centralised logging configuration for the Multi-Chat Room Server."""
 
 import logging
 import logging.handlers
 import os
 import sys
-
-# ── Colour codes for terminal output (ANSI) ───────────────────────────────────
 
 _RESET  = "\033[0m"
 _BOLD   = "\033[1m"
@@ -58,14 +33,8 @@ _LOG_FILE = os.path.join(_LOG_DIR, "server.log")
 _MAX_BYTES    = 5 * 1024 * 1024   # 5 MB
 _BACKUP_COUNT = 3                  # keep server.log, server.log.1, server.log.2
 
-
-# ── Custom formatter with optional ANSI colour ────────────────────────────────
-
 class _ColourFormatter(logging.Formatter):
-    """
-    Logging formatter that prepends ANSI colour codes to the level name
-    when writing to a terminal that supports colour.
-    """
+    """Logging formatter that prepends ANSI colour codes to the level name"""
 
     _FMT = "{asctime}  {levelname:<8}  {name:<30}  {message}"
     _DATE_FMT = "%Y-%m-%d %H:%M:%S"
@@ -85,21 +54,8 @@ class _ColourFormatter(logging.Formatter):
             record.levelname = f"{colour}{_BOLD}{record.levelname}{_RESET}"
         return super().format(record)
 
-
-# ── Public API ────────────────────────────────────────────────────────────────
-
 def setup_logger(level: int = logging.INFO) -> None:
-    """
-    Configure the root logger with console + rotating-file handlers.
-
-    Parameters
-    ----------
-    level : logging level for both handlers (default: logging.INFO).
-            Pass logging.DEBUG for verbose output during development.
-
-    Must be called exactly once, before any logging calls are made.
-    Subsequent calls are no-ops (guards against double-initialisation).
-    """
+    """Configure the root logger with console + rotating-file handlers."""
     root = logging.getLogger()
 
     # Guard: if handlers already exist, logger was already initialised.
@@ -108,14 +64,12 @@ def setup_logger(level: int = logging.INFO) -> None:
 
     root.setLevel(level)
 
-    # ── Console handler ───────────────────────────────────────────────────────
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(level)
     # Only use colour when stdout is connected to a real terminal.
     use_colour = sys.stdout.isatty()
     console_handler.setFormatter(_ColourFormatter(use_colour=use_colour))
 
-    # ── File handler (rotating) ───────────────────────────────────────────────
     os.makedirs(_LOG_DIR, exist_ok=True)
     file_handler = logging.handlers.RotatingFileHandler(
         _LOG_FILE,

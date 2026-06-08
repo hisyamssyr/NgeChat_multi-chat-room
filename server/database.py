@@ -1,26 +1,4 @@
-"""
-server/database.py
-------------------
-Database Access Layer for the Multi-Chat Room Server.
-
-Responsibilities:
-  - Create and initialise all SQLite tables on first run.
-  - Provide thread-safe CRUD operations for users, rooms, and messages.
-  - Hash passwords with SHA-256 before storage (never store plaintext).
-
-Thread safety:
-  - A single threading.Lock (_lock) serialises every write operation.
-  - SQLite is opened with check_same_thread=False so that the one
-    connection object can be shared across ClientHandler threads.
-  - All public methods acquire _lock for the duration of the call, which
-    is safe because SQLite itself is not re-entered concurrently.
-
-Extensibility notes:
-  - To migrate to PostgreSQL/MySQL later, replace the sqlite3 calls here
-    without touching any other module.
-  - Message history is capped at HISTORY_LIMIT rows per room to avoid
-    flooding newly-joined clients with thousands of old messages.
-"""
+"""Database Access Layer for the Multi-Chat Room Server."""
 
 import sqlite3
 import hashlib
@@ -43,17 +21,8 @@ _DEFAULT_DB_PATH = os.path.join(
     "chat.db",
 )
 
-
 class Database:
-    """
-    Thread-safe SQLite database interface.
-
-    Usage
-    -----
-        db = Database()          # uses default path
-        db = Database("/custom/path/chat.db")
-        db.initialise()          # must be called once before any other method
-    """
+    """Thread-safe SQLite database interface."""
 
     def __init__(self, db_path: str = _DEFAULT_DB_PATH) -> None:
         self._db_path = db_path
@@ -65,10 +34,7 @@ class Database:
     # ------------------------------------------------------------------
 
     def initialise(self) -> None:
-        """
-        Open the SQLite connection and create all tables if they do not
-        already exist.  Must be called once before any other method.
-        """
+        """Open the SQLite connection and create all tables if they do not"""
         os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
 
         self._conn = sqlite3.connect(
@@ -99,38 +65,9 @@ class Database:
         with self._lock:
             cur = self._conn.cursor()
 
-            cur.executescript("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username      TEXT    UNIQUE NOT NULL,
-                    password_hash TEXT    NOT NULL
-                );
-
-                CREATE TABLE IF NOT EXISTS rooms (
-                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                    room_name     TEXT    UNIQUE NOT NULL,
-                    created_by    TEXT    NOT NULL,
-                    invite_hash   TEXT    NOT NULL DEFAULT ''
-                );
-
-                CREATE TABLE IF NOT EXISTS room_members (
-                    room_name TEXT NOT NULL,
-                    username  TEXT NOT NULL,
-                    joined_at TEXT NOT NULL,
-                    PRIMARY KEY (room_name, username)
-                );
-
-                CREATE TABLE IF NOT EXISTS messages (
-                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                    room_name TEXT    NOT NULL,
-                    sender    TEXT    NOT NULL,
-                    message   TEXT    NOT NULL,
-                    timestamp TEXT    NOT NULL
-                );
-            """)
+            cur.executescript("""CREATE TABLE IF NOT EXISTS users (""")
             self._conn.commit()
 
-            # ── Auto-migrations (safe to run every startup) ────────────────
             migrations = [
                 "ALTER TABLE rooms ADD COLUMN invite_hash TEXT NOT NULL DEFAULT ''",
                 # Drop old password_hash col: SQLite doesn’t support DROP COLUMN
@@ -161,14 +98,7 @@ class Database:
     # ------------------------------------------------------------------
 
     def register_user(self, username: str, password: str) -> tuple[bool, str]:
-        """
-        Register a new user account.
-
-        Returns
-        -------
-        (True,  "Registration successful.")  on success
-        (False, "<reason>")                  on failure
-        """
+        """Register a new user account."""
         if not username or not username.strip():
             return False, "Username cannot be empty."
         if not password:
@@ -195,14 +125,7 @@ class Database:
                 return False, "Database error during registration."
 
     def validate_login(self, username: str, password: str) -> tuple[bool, str]:
-        """
-        Verify login credentials.
-
-        Returns
-        -------
-        (True,  "Login successful.")  on success
-        (False, "<reason>")           on failure
-        """
+        """Verify login credentials."""
         if not username or not password:
             return False, "Username and password are required."
 
@@ -244,15 +167,7 @@ class Database:
         return "".join(secrets.choice(alphabet) for _ in range(length))
 
     def create_room(self, room_name: str, created_by: str) -> tuple[bool, str, str]:
-        """
-        Create a new room, auto-generate an invite code, and make the
-        creator a permanent member.
-
-        Returns
-        -------
-        (True,  "Room '<name>' created.", plaintext_code)  on success
-        (False, "<reason>",               "")              on failure
-        """
+        """Create a new room, auto-generate an invite code, and make the"""
         if not room_name or not room_name.strip():
             return False, "Room name cannot be empty.", ""
         if len(room_name) > 64:
@@ -307,7 +222,7 @@ class Database:
             return row is not None
 
     def add_room_member(self, room_name: str, username: str) -> bool:
-        """Add `username` as a permanent member of `room_name`. Idempotent."""
+        """Add `username` as a permanent member of `room_name`."""
         now = self._now_utc()
         with self._lock:
             try:
@@ -323,11 +238,7 @@ class Database:
                 return False
 
     def check_room_code(self, room_name: str, code: str) -> bool:
-        """
-        Verify whether `code` matches the invite code for `room_name`.
-
-        Returns True if correct, False if wrong or room doesn't exist.
-        """
+        """Verify whether `code` matches the invite code for `room_name`."""
         with self._lock:
             row = self._conn.execute(
                 "SELECT invite_hash FROM rooms WHERE room_name = ?",
@@ -339,11 +250,7 @@ class Database:
         return self._hash_password(code.strip()) == row["invite_hash"]
 
     def get_all_rooms(self, username: str = "") -> list[dict]:
-        """
-        Return rooms the user is a member of (or all rooms if no username given).
-
-        Each entry: { "room_name": str, "created_by": str, "is_member": bool }
-        """
+        """Return rooms the user is a member of (or all rooms if no username given)."""
         with self._lock:
             if username:
                 # Only rooms where the user is a member.
@@ -371,11 +278,7 @@ class Database:
             ]
 
     def get_room_by_code(self, code: str) -> str | None:
-        """
-        Look up the room name whose invite code matches `code`.
-
-        Returns the room_name string on success, or None if no room matches.
-        """
+        """Look up the room name whose invite code matches `code`."""
         code_hash = self._hash_password(code.strip().upper())
         with self._lock:
             row = self._conn.execute(
@@ -395,15 +298,7 @@ class Database:
         message: str,
         timestamp: str | None = None,
     ) -> bool:
-        """
-        Persist a broadcast message.
-
-        Parameters
-        ----------
-        timestamp : optional ISO-8601 string; auto-generated (UTC) if None.
-
-        Returns True on success, False on error.
-        """
+        """Persist a broadcast message."""
         if timestamp is None:
             timestamp = self._now_utc()
 
@@ -421,26 +316,10 @@ class Database:
                 return False
 
     def get_room_history(self, room_name: str, limit: int = HISTORY_LIMIT) -> list[dict]:
-        """
-        Fetch the most recent `limit` messages for a room, ordered oldest-first
-        so the client can display them chronologically.
-
-        Each entry is a dict:
-            { "sender": str, "message": str, "timestamp": str }
-        """
+        """Fetch the most recent `limit` messages for a room, ordered oldest-first"""
         with self._lock:
             rows = self._conn.execute(
-                """
-                SELECT sender, message, timestamp
-                FROM (
-                    SELECT id, sender, message, timestamp
-                    FROM   messages
-                    WHERE  room_name = ?
-                    ORDER  BY id DESC
-                    LIMIT  ?
-                )
-                ORDER BY id ASC
-                """,
+                """SELECT sender, message, timestamp""",
                 (room_name, limit),
             ).fetchall()
             return [

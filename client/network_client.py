@@ -1,22 +1,4 @@
-"""
-client/network_client.py
-------------------------
-Qt-aware networking bridge for the PyQt6 GUI client.
-
-Wraps the existing send_packet / recv_packet transport layer and
-exposes a QObject with pyqtSignal emissions, so the background
-receiver thread can safely update the Qt GUI thread via Qt's
-automatic queued-connection mechanism — no manual mutex needed.
-
-Zero changes to client/protocol.py or any server code.
-
-Signal flow:
-    ReceiverThread (daemon)          Qt GUI Thread (main)
-    ─────────────────────────        ────────────────────
-    recv_packet() → packet           packet_received ──► MainWindow.on_packet()
-    connection drop                  disconnected_signal ► on_disconnected()
-    connect success                  connected_signal    ► (initial data fetch)
-"""
+"""Qt-aware networking bridge for the PyQt6 GUI client."""
 
 import socket
 import threading
@@ -46,19 +28,8 @@ from client.protocol import (
 
 logger = logging.getLogger(__name__)
 
-
 class NetworkClient(QObject):
-    """
-    Thread-safe Qt bridge for the TCP chat protocol.
-
-    Signals
-    -------
-    packet_received(dict)   — emitted for every server packet; auto-queued
-                              to the GUI thread by Qt's connection mechanism.
-    connected_signal()      — TCP connection established.
-    disconnected_signal()   — connection closed or lost.
-    error_signal(str)       — human-readable connection error.
-    """
+    """Thread-safe Qt bridge for the TCP chat protocol."""
 
     packet_received     = pyqtSignal(dict)
     connected_signal    = pyqtSignal()
@@ -79,14 +50,7 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------
 
     def connect_to_server(self) -> tuple[bool, str]:
-        """
-        Establish a TCP connection and start the receiver daemon thread.
-
-        Returns
-        -------
-        (True,  "")            on success
-        (False, error_message) on failure
-        """
+        """Establish a TCP connection and start the receiver daemon thread."""
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.settimeout(5.0)
@@ -138,7 +102,7 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------
 
     def send(self, packet: dict) -> bool:
-        """Send a pre-built packet dict. Returns True on success."""
+        """Send a pre-built packet dict."""
         if not self._connected or not self._sock:
             return False
         return send_packet(self._sock, packet)
@@ -181,11 +145,7 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------
 
     def _receiver_loop(self) -> None:
-        """
-        Background daemon thread.
-        Reads packets and emits packet_received — PyQt6 automatically
-        queues the signal delivery to the main GUI thread.
-        """
+        """Background daemon thread."""
         while not self._stop_event.is_set():
             packet = recv_packet(self._sock)
 

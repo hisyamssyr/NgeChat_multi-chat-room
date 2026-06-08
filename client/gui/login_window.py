@@ -1,20 +1,4 @@
-"""
-client/gui/login_window.py
---------------------------
-Login / Register dialog shown before the main window appears.
-
-Flow
-----
-1. User fills in Host, Port, Username, Password.
-2. Clicks [Login] or [Register then Login].
-3. LoginWindow creates a NetworkClient, connects, sends the packet.
-4. The receiver thread emits packet_received → _on_packet() runs in
-   the Qt event loop (which is active inside dialog.exec()).
-5. On "ok":  dialog.accept() → gui_main picks up network + username.
-6. On "error": show inline error label, let user retry.
-
-The existing CLI client (client.py) is completely untouched.
-"""
+"""Flow"""
 
 import sys
 import os
@@ -32,15 +16,8 @@ from client.gui.styles import (
     BG_DEEP, BG_SURFACE, BLUE, GREEN, RED, TEXT, TEXT_MUTED, BORDER,
 )
 
-
 class LoginWindow(QDialog):
-    """
-    Modal login / register form.
-
-    After exec() returns Accepted:
-        self.network_client  — connected NetworkClient instance
-        self.username        — authenticated username (str)
-    """
+    """After exec() returns Accepted:"""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -81,7 +58,6 @@ class LoginWindow(QDialog):
         wlayout.setContentsMargins(30, 30, 30, 30)
         wlayout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # ── Card ──────────────────────────────────────────────────────
         card = QFrame()
         card.setObjectName("login_card")
         card_layout = QVBoxLayout(card)
@@ -101,7 +77,6 @@ class LoginWindow(QDialog):
 
         card_layout.addSpacing(8)
 
-        # ── Username ──────────────────────────────────────────────────
         lbl_user = QLabel("USERNAME")
         lbl_user.setObjectName("field_label")
         card_layout.addWidget(lbl_user)
@@ -112,7 +87,6 @@ class LoginWindow(QDialog):
         self._username_input.returnPressed.connect(self._focus_password)
         card_layout.addWidget(self._username_input)
 
-        # ── Password ──────────────────────────────────────────────────
         lbl_pass = QLabel("PASSWORD")
         lbl_pass.setObjectName("field_label")
         card_layout.addWidget(lbl_pass)
@@ -123,7 +97,6 @@ class LoginWindow(QDialog):
         self._password_input.returnPressed.connect(self._on_login_clicked)
         card_layout.addWidget(self._password_input)
 
-        # ── Status / error label ──────────────────────────────────────
         self._status_label = QLabel("")
         self._status_label.setObjectName("status_label")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -133,14 +106,12 @@ class LoginWindow(QDialog):
 
         card_layout.addSpacing(4)
 
-        # ── Login button ──────────────────────────────────────────────
         self._login_btn = QPushButton("Login")
         self._login_btn.setObjectName("login_btn")
         self._login_btn.setFixedHeight(40)
         self._login_btn.clicked.connect(self._on_login_clicked)
         card_layout.addWidget(self._login_btn)
 
-        # ── Register button ───────────────────────────────────────────
         self._register_btn = QPushButton("Register New Account")
         self._register_btn.setObjectName("register_btn")
         self._register_btn.setFixedHeight(38)
@@ -149,13 +120,11 @@ class LoginWindow(QDialog):
 
         card_layout.addSpacing(8)
 
-        # ── Divider ───────────────────────────────────────────────────
         div = QFrame()
         div.setFrameShape(QFrame.Shape.HLine)
         div.setStyleSheet(f"color: {BORDER};")
         card_layout.addWidget(div)
 
-        # ── Server connection fields ───────────────────────────────────
         lbl_srv = QLabel("SERVER CONNECTION")
         lbl_srv.setObjectName("field_label")
         card_layout.addWidget(lbl_srv)
@@ -218,9 +187,7 @@ class LoginWindow(QDialog):
     # ------------------------------------------------------------------
 
     def _get_or_connect(self) -> tuple[bool, str]:
-        """
-        Return the existing connected NetworkClient, or create + connect one.
-        """
+        """Return the existing connected NetworkClient, or create + connect one."""
         host = self._host_input.text().strip()
         try:
             port = int(self._port_input.text().strip())
