@@ -36,6 +36,7 @@ from client.protocol import (
     build_logout,
     build_create_room,
     build_join_room,
+    build_join_by_code,
     build_leave_room,
     build_broadcast,
     build_private_message,
@@ -154,8 +155,11 @@ class NetworkClient(QObject):
     def send_create_room(self, room: str) -> bool:
         return self.send(build_create_room(room))
 
-    def send_join_room(self, room: str) -> bool:
-        return self.send(build_join_room(room))
+    def send_join_room(self, room: str, code: str = "") -> bool:
+        return self.send(build_join_room(room, code))
+
+    def send_join_by_code(self, code: str) -> bool:
+        return self.send(build_join_by_code(code))
 
     def send_leave_room(self, room: str) -> bool:
         return self.send(build_leave_room(room))

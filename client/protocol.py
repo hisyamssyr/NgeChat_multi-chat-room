@@ -125,9 +125,17 @@ def build_create_room(room: str) -> dict:
     return {"type": "create_room", "room": room}
 
 
-def build_join_room(room: str) -> dict:
-    """Create a join_room request packet."""
-    return {"type": "join_room", "room": room}
+def build_join_room(room: str, code: str = "") -> dict:
+    """Create a join_room request packet (for re-joining rooms you're already a member of)."""
+    packet: dict = {"type": "join_room", "room": room}
+    if code:
+        packet["code"] = code
+    return packet
+
+
+def build_join_by_code(code: str) -> dict:
+    """Join a room using only an 8-character invite code (no room name needed)."""
+    return {"type": "join_by_code", "code": code.strip().upper()}
 
 
 def build_leave_room(room: str) -> dict:

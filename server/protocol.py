@@ -53,6 +53,7 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "logout":         [],
     "create_room":    ["room"],
     "join_room":      ["room"],
+    "join_by_code":   ["code"],
     "leave_room":     ["room"],
     "broadcast":      ["room", "message"],
     "private_message":["target", "message"],

@@ -317,3 +317,223 @@ sqlite3.OperationalError: no such column: rowid
 2026-06-08 14:03:22  INFO      __main__                        Client 127.0.0.1:51558 disconnected.
 2026-06-08 14:03:22  INFO      server.room_manager             User went offline: testing3 (was in rooms: ['server test'])
 2026-06-08 14:03:22  INFO      __main__                        Cleaned up session for 'testing3' (was in: ['server test']).
+2026-06-08 18:55:36  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 18:55:36  INFO      server.database                 DB migration: added 'password_hash' column to rooms table.
+2026-06-08 18:55:36  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 18:55:36  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 18:56:01  INFO      __main__                        New connection from 127.0.0.1:64304
+2026-06-08 18:56:01  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 18:56:01  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:64304
+2026-06-08 18:56:04  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 18:56:04  INFO      __main__                        'hisyamssyr' joined room 'testing_room'.
+2026-06-08 18:56:05  INFO      server.room_manager             'hisyamssyr' joined room 'server test'
+2026-06-08 18:56:05  INFO      __main__                        'hisyamssyr' joined room 'server test'.
+2026-06-08 18:56:06  INFO      server.room_manager             'hisyamssyr' joined room 'halodok'
+2026-06-08 18:56:06  INFO      __main__                        'hisyamssyr' joined room 'halodok'.
+2026-06-08 18:56:40  INFO      server.database                 Room created: 'testlock' by hisyamssyr (protected=True)
+2026-06-08 18:56:47  INFO      server.room_manager             'hisyamssyr' joined room 'testlock'
+2026-06-08 18:56:47  INFO      __main__                        'hisyamssyr' joined room 'testlock'.
+2026-06-08 18:56:52  INFO      __main__                        Broadcast in 'testlock' by 'hisyamssyr': hay sayang
+2026-06-08 18:56:54  INFO      server.room_manager             'hisyamssyr' left room 'testlock'
+2026-06-08 18:56:54  INFO      __main__                        'hisyamssyr' left room 'testlock'.
+2026-06-08 18:57:04  INFO      __main__                        User logged out: hisyamssyr
+2026-06-08 18:57:04  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testing_room', 'server test', 'halodok'])
+2026-06-08 18:57:04  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['halodok', 'server test', 'testing_room']).
+2026-06-08 19:05:26  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 19:05:26  INFO      server.database                 DB migration applied: ALTER TABLE rooms ADD COLUMN invite_hash TEXT NOT NULL DEFAU
+2026-06-08 19:05:26  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 19:05:26  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 19:07:08  INFO      __main__                        New connection from 127.0.0.1:50741
+2026-06-08 19:07:08  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 19:07:08  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:50741
+2026-06-08 19:07:28  INFO      server.database                 Room created: 'testlockroom' by hisyamssyr (code=R17KE9LF)
+2026-06-08 19:07:45  INFO      server.room_manager             'hisyamssyr' joined room 'testlockroom'
+2026-06-08 19:07:45  INFO      __main__                        'hisyamssyr' joined room 'testlockroom'.
+2026-06-08 19:07:46  INFO      server.room_manager             'hisyamssyr' left room 'testlockroom'
+2026-06-08 19:07:46  INFO      __main__                        'hisyamssyr' left room 'testlockroom'.
+2026-06-08 19:07:58  INFO      server.room_manager             'hisyamssyr' joined room 'testlockroom'
+2026-06-08 19:07:58  INFO      __main__                        'hisyamssyr' joined room 'testlockroom'.
+2026-06-08 19:08:01  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': R17KE9LF
+2026-06-08 19:08:08  INFO      server.database                 Room created: 'test2' by hisyamssyr (code=97JXJYS2)
+2026-06-08 19:08:12  INFO      server.room_manager             'hisyamssyr' joined room 'test2'
+2026-06-08 19:08:12  INFO      __main__                        'hisyamssyr' joined room 'test2'.
+2026-06-08 19:08:15  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': 97JXJYS2
+2026-06-08 19:08:17  INFO      server.room_manager             'hisyamssyr' left room 'test2'
+2026-06-08 19:08:17  INFO      __main__                        'hisyamssyr' left room 'test2'.
+2026-06-08 19:08:18  INFO      server.room_manager             'hisyamssyr' left room 'testlockroom'
+2026-06-08 19:08:18  INFO      __main__                        'hisyamssyr' left room 'testlockroom'.
+2026-06-08 19:08:38  INFO      __main__                        New connection from 127.0.0.1:59479
+2026-06-08 19:08:38  INFO      server.room_manager             User came online: testing2
+2026-06-08 19:08:38  INFO      __main__                        User logged in: testing2 from 127.0.0.1:59479
+2026-06-08 19:09:05  INFO      server.room_manager             'hisyamssyr' joined room 'testlockroom'
+2026-06-08 19:09:05  INFO      __main__                        'hisyamssyr' joined room 'testlockroom'.
+2026-06-08 19:09:12  INFO      server.room_manager             'hisyamssyr' joined room 'test2'
+2026-06-08 19:09:12  INFO      __main__                        'hisyamssyr' joined room 'test2'.
+2026-06-08 19:09:16  INFO      __main__                        'testing2' joined room 'testlockroom' with invite code.
+2026-06-08 19:09:16  INFO      server.room_manager             'testing2' joined room 'testlockroom'
+2026-06-08 19:09:16  INFO      __main__                        'testing2' joined room 'testlockroom'.
+2026-06-08 19:09:38  INFO      __main__                        'testing2' joined room 'test2' with invite code.
+2026-06-08 19:09:38  INFO      server.room_manager             'testing2' joined room 'test2'
+2026-06-08 19:09:38  INFO      __main__                        'testing2' joined room 'test2'.
+2026-06-08 19:09:53  INFO      __main__                        Broadcast in 'test2' by 'testing2': yes masuk
+2026-06-08 19:09:57  INFO      __main__                        Client 127.0.0.1:59479 disconnected.
+2026-06-08 19:09:57  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['testlockroom', 'test2'])
+2026-06-08 19:09:57  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['test2', 'testlockroom']).
+2026-06-08 19:10:09  INFO      __main__                        New connection from 127.0.0.1:54995
+2026-06-08 19:10:09  INFO      server.room_manager             User came online: testing2
+2026-06-08 19:10:09  INFO      __main__                        User logged in: testing2 from 127.0.0.1:54995
+2026-06-08 19:10:13  INFO      __main__                        Client 127.0.0.1:54995 disconnected.
+2026-06-08 19:10:13  INFO      server.room_manager             User went offline: testing2 (was in rooms: [])
+2026-06-08 19:10:13  INFO      __main__                        Cleaned up session for 'testing2' (was in: []).
+2026-06-08 19:10:16  INFO      __main__                        Client 127.0.0.1:50741 disconnected.
+2026-06-08 19:10:16  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testlockroom', 'test2'])
+2026-06-08 19:10:16  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['test2', 'testlockroom']).
+2026-06-08 19:15:01  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 19:15:01  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 19:15:01  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 19:15:11  INFO      __main__                        New connection from 127.0.0.1:49247
+2026-06-08 19:15:11  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 19:15:11  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:49247
+2026-06-08 19:15:24  INFO      __main__                        New connection from 127.0.0.1:49250
+2026-06-08 19:15:24  INFO      server.room_manager             User came online: testing2
+2026-06-08 19:15:24  INFO      __main__                        User logged in: testing2 from 127.0.0.1:49250
+2026-06-08 19:15:35  WARNING   __main__                        PacketError from 127.0.0.1:49250 — Unknown packet type: 'join_by_code'.
+2026-06-08 19:15:46  INFO      server.database                 Room created: 'test' by testing2 (code=HC7ZAGD0)
+2026-06-08 19:15:49  INFO      server.room_manager             'testing2' joined room 'test'
+2026-06-08 19:15:49  INFO      __main__                        'testing2' joined room 'test'.
+2026-06-08 19:15:51  INFO      __main__                        Broadcast in 'test' by 'testing2': helo
+2026-06-08 19:15:52  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:52  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:53  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:53  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:53  INFO      __main__                        Broadcast in 'test' by 'testing2': hh
+2026-06-08 19:15:53  INFO      __main__                        Broadcast in 'test' by 'testing2': hh
+2026-06-08 19:15:54  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:54  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:54  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:54  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:54  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:55  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:55  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:55  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:55  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:15:55  INFO      __main__                        Broadcast in 'test' by 'testing2': hh
+2026-06-08 19:15:55  INFO      __main__                        Broadcast in 'test' by 'testing2': h
+2026-06-08 19:16:06  WARNING   __main__                        PacketError from 127.0.0.1:49247 — Unknown packet type: 'join_by_code'.
+2026-06-08 19:16:10  WARNING   __main__                        PacketError from 127.0.0.1:49247 — Unknown packet type: 'join_by_code'.
+2026-06-08 19:16:13  INFO      server.room_manager             'hisyamssyr' joined room 'testlockroom'
+2026-06-08 19:16:13  INFO      __main__                        'hisyamssyr' joined room 'testlockroom'.
+2026-06-08 19:16:15  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:15  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:15  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:16  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:16  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:16  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:16  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:16  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:17  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:17  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': ss
+2026-06-08 19:16:17  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:17  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:17  INFO      __main__                        Broadcast in 'testlockroom' by 'hisyamssyr': s
+2026-06-08 19:16:19  INFO      server.room_manager             'hisyamssyr' joined room 'test2'
+2026-06-08 19:16:19  INFO      __main__                        'hisyamssyr' joined room 'test2'.
+2026-06-08 19:16:21  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': s
+2026-06-08 19:16:21  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': s
+2026-06-08 19:16:21  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': s
+2026-06-08 19:16:21  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': ss
+2026-06-08 19:16:21  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': s
+2026-06-08 19:16:22  INFO      __main__                        Broadcast in 'test2' by 'hisyamssyr': s
+2026-06-08 19:16:25  INFO      server.room_manager             'testing2' joined room 'test2'
+2026-06-08 19:16:25  INFO      __main__                        'testing2' joined room 'test2'.
+2026-06-08 19:16:26  INFO      server.room_manager             'testing2' joined room 'testlockroom'
+2026-06-08 19:16:26  INFO      __main__                        'testing2' joined room 'testlockroom'.
+2026-06-08 19:16:38  WARNING   __main__                        PacketError from 127.0.0.1:49247 — Unknown packet type: 'join_by_code'.
+2026-06-08 19:16:48  INFO      server.room_manager             'hisyamssyr' left room 'test2'
+2026-06-08 19:16:48  INFO      __main__                        'hisyamssyr' left room 'test2'.
+2026-06-08 19:16:51  INFO      server.room_manager             'hisyamssyr' joined room 'test2'
+2026-06-08 19:16:51  INFO      __main__                        'hisyamssyr' joined room 'test2'.
+2026-06-08 19:16:53  INFO      server.room_manager             'hisyamssyr' left room 'test2'
+2026-06-08 19:16:53  INFO      __main__                        'hisyamssyr' left room 'test2'.
+2026-06-08 19:16:55  INFO      server.room_manager             'hisyamssyr' left room 'testlockroom'
+2026-06-08 19:16:55  INFO      __main__                        'hisyamssyr' left room 'testlockroom'.
+2026-06-08 19:17:04  INFO      server.room_manager             'testing2' left room 'test'
+2026-06-08 19:17:04  INFO      __main__                        'testing2' left room 'test'.
+2026-06-08 19:17:06  INFO      server.room_manager             'testing2' left room 'test2'
+2026-06-08 19:17:06  INFO      __main__                        'testing2' left room 'test2'.
+2026-06-08 19:17:08  INFO      server.room_manager             'testing2' left room 'testlockroom'
+2026-06-08 19:17:08  INFO      __main__                        'testing2' left room 'testlockroom'.
+2026-06-08 19:17:20  INFO      __main__                        Client 127.0.0.1:49250 disconnected.
+2026-06-08 19:17:20  INFO      server.room_manager             User went offline: testing2 (was in rooms: [])
+2026-06-08 19:17:20  INFO      __main__                        Cleaned up session for 'testing2' (was in: []).
+2026-06-08 19:17:20  INFO      __main__                        Client 127.0.0.1:49247 disconnected.
+2026-06-08 19:17:20  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: [])
+2026-06-08 19:17:20  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: []).
+2026-06-08 19:18:26  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 19:18:26  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 19:18:26  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 19:18:52  INFO      __main__                        New connection from 127.0.0.1:62948
+2026-06-08 19:18:52  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 19:18:52  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:62948
+2026-06-08 19:19:13  INFO      __main__                        New connection from 127.0.0.1:62951
+2026-06-08 19:19:13  INFO      server.room_manager             User came online: testing2
+2026-06-08 19:19:13  INFO      __main__                        User logged in: testing2 from 127.0.0.1:62951
+2026-06-08 19:19:20  INFO      server.database                 Room created: 'teshere' by testing2 (code=OES2LSYP)
+2026-06-08 19:19:23  INFO      server.room_manager             'testing2' joined room 'teshere'
+2026-06-08 19:19:23  INFO      __main__                        'testing2' joined room 'teshere'.
+2026-06-08 19:19:29  WARNING   __main__                        PacketError from 127.0.0.1:62948 — Unknown packet type: 'join_by_code'.
+2026-06-08 19:19:33  INFO      __main__                        User logged out: hisyamssyr
+2026-06-08 19:19:33  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: [])
+2026-06-08 19:19:33  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: []).
+2026-06-08 19:19:34  INFO      __main__                        Client 127.0.0.1:62951 disconnected.
+2026-06-08 19:19:34  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['teshere'])
+2026-06-08 19:19:34  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['teshere']).
+2026-06-08 19:22:12  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 19:22:12  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 19:22:12  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 19:22:27  INFO      __main__                        New connection from 127.0.0.1:51162
+2026-06-08 19:22:28  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 19:22:28  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:51162
+2026-06-08 19:22:37  INFO      __main__                        New connection from 127.0.0.1:51163
+2026-06-08 19:22:37  INFO      server.room_manager             User came online: testing2
+2026-06-08 19:22:37  INFO      __main__                        User logged in: testing2 from 127.0.0.1:51163
+2026-06-08 19:22:43  INFO      server.database                 Room created: 'teshewre' by testing2 (code=GINAK27H)
+2026-06-08 19:22:45  INFO      server.room_manager             'testing2' joined room 'teshewre'
+2026-06-08 19:22:45  INFO      __main__                        'testing2' joined room 'teshewre'.
+2026-06-08 19:22:48  INFO      __main__                        Broadcast in 'teshewre' by 'testing2': hi
+2026-06-08 19:22:52  INFO      __main__                        'hisyamssyr' joined room 'teshewre' via invite code.
+2026-06-08 19:22:52  INFO      server.room_manager             'hisyamssyr' joined room 'teshewre'
+2026-06-08 19:22:55  INFO      server.room_manager             'hisyamssyr' left room 'teshewre'
+2026-06-08 19:22:55  INFO      __main__                        'hisyamssyr' left room 'teshewre'.
+2026-06-08 19:23:03  INFO      server.room_manager             'hisyamssyr' joined room 'teshewre'
+2026-06-08 19:23:03  INFO      __main__                        'hisyamssyr' joined room 'teshewre'.
+2026-06-08 19:23:07  INFO      server.room_manager             'hisyamssyr' left room 'teshewre'
+2026-06-08 19:23:07  INFO      __main__                        'hisyamssyr' left room 'teshewre'.
+2026-06-08 19:23:20  INFO      __main__                        Private message: 'testing2' → 'hisyamssyr': hay syg
+2026-06-08 19:23:41  INFO      __main__                        Private message: 'hisyamssyr' → 'testing2': hay
+2026-06-08 19:24:00  INFO      __main__                        Client 127.0.0.1:51162 disconnected.
+2026-06-08 19:24:00  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: [])
+2026-06-08 19:24:00  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: []).
+2026-06-08 19:24:01  INFO      __main__                        Client 127.0.0.1:51163 disconnected.
+2026-06-08 19:24:01  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['teshewre'])
+2026-06-08 19:24:01  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['teshewre']).

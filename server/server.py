@@ -165,6 +165,7 @@ class ClientHandler:
             "logout":          self._handle_logout,
             "create_room":     self._handle_create_room,
             "join_room":       self._handle_join_room,
+            "join_by_code":    self._handle_join_by_code,
             "leave_room":      self._handle_leave_room,
             "broadcast":       self._handle_broadcast,
             "private_message": self._handle_private_message,
@@ -267,9 +268,15 @@ class ClientHandler:
             return
 
         room_name = packet["room"].strip()
-        ok, msg = self._db.create_room(room_name, self._username)
+        ok, msg, invite_code = self._db.create_room(room_name, self._username)
         if ok:
-            self._send_ok(msg)
+            # Send the invite code back to the creator so they can share it.
+            send_packet(self._sock, {
+                "status":      "ok",
+                "message":     msg,
+                "room_code":   invite_code,
+                "room_name":   room_name,
+            })
         else:
             self._send_err(msg)
 
@@ -282,27 +289,34 @@ class ClientHandler:
             return
 
         room_name = packet["room"].strip()
+        code      = packet.get("code", "")   # empty = hoping they're a member
 
         # Room must exist in the database.
         if not self._db.room_exists(room_name):
             self._send_err(f"Room '{room_name}' does not exist.")
             return
 
-        # Idempotent join — returns False if already in room.
+        # Check if user is already a permanent member (no code needed).
+        if not self._db.is_room_member(room_name, self._username):
+            # Not a member — verify the invite code.
+            if not self._db.check_room_code(room_name, code):
+                self._send_err("Wrong invite code.")
+                return
+            # Code correct — add as permanent member.
+            self._db.add_room_member(room_name, self._username)
+            logger.info("'%s' joined room '%s' with invite code.", self._username, room_name)
+
+        # Idempotent in-memory join.
         newly_joined = self._rooms.join_room(self._username, room_name)
 
-        # Send room history regardless (re-joining still shows history).
+        # Send room history.
         history = self._db.get_room_history(room_name)
+        self._send_ok(f"Joined room '{room_name}'.")
 
-        self._send_ok(
-            f"Joined room '{room_name}'.",
-        )
-
-        # Push history as a separate packet so the client can render it.
         if history:
             send_packet(self._sock, make_history_packet(history))
 
-        # Notify other room members only on a fresh join.
+        # Notify others only on a fresh session join.
         if newly_joined:
             notif = make_notification_push(
                 room_name,
@@ -310,6 +324,51 @@ class ClientHandler:
             )
             self._rooms.broadcast_to_room(room_name, notif, exclude=self._username)
             logger.info("'%s' joined room '%s'.", self._username, room_name)
+
+    # ------------------------------------------------------------------
+    # Handler: join_by_code  (join a room using only the 8-char invite code)
+    # ------------------------------------------------------------------
+
+    def _handle_join_by_code(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+
+        code = packet.get("code", "").strip().upper()
+        if not code:
+            self._send_err("Invite code is required.")
+            return
+
+        # Look up which room this code belongs to.
+        room_name = self._db.get_room_by_code(code)
+        if not room_name:
+            self._send_err("Invalid invite code.")
+            return
+
+        # Add as permanent member if not already one.
+        already_member = self._db.is_room_member(room_name, self._username)
+        if not already_member:
+            self._db.add_room_member(room_name, self._username)
+            logger.info("'%s' joined room '%s' via invite code.", self._username, room_name)
+
+        # In-memory join.
+        newly_joined = self._rooms.join_room(self._username, room_name)
+
+        history = self._db.get_room_history(room_name)
+        send_packet(self._sock, {
+            "status":    "ok",
+            "message":   f"Joined room '{room_name}'.",
+            "room_name": room_name,   # client needs the name to switch views
+        })
+
+        if history:
+            send_packet(self._sock, make_history_packet(history))
+
+        if newly_joined:
+            notif = make_notification_push(
+                room_name,
+                f"📥 {self._username} joined the room.",
+            )
+            self._rooms.broadcast_to_room(room_name, notif, exclude=self._username)
 
     # ------------------------------------------------------------------
     # Handler: leave_room
@@ -421,7 +480,7 @@ class ClientHandler:
         if not self._require_login():
             return
 
-        rooms = self._db.get_all_rooms()
+        rooms = self._db.get_all_rooms(self._username)
         send_packet(self._sock, make_room_list_packet(rooms))
 
     # ------------------------------------------------------------------

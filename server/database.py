@@ -27,6 +27,8 @@ import hashlib
 import threading
 import logging
 import os
+import secrets
+import string
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -105,9 +107,17 @@ class Database:
                 );
 
                 CREATE TABLE IF NOT EXISTS rooms (
-                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                    room_name  TEXT    UNIQUE NOT NULL,
-                    created_by TEXT    NOT NULL
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    room_name     TEXT    UNIQUE NOT NULL,
+                    created_by    TEXT    NOT NULL,
+                    invite_hash   TEXT    NOT NULL DEFAULT ''
+                );
+
+                CREATE TABLE IF NOT EXISTS room_members (
+                    room_name TEXT NOT NULL,
+                    username  TEXT NOT NULL,
+                    joined_at TEXT NOT NULL,
+                    PRIMARY KEY (room_name, username)
                 );
 
                 CREATE TABLE IF NOT EXISTS messages (
@@ -119,6 +129,21 @@ class Database:
                 );
             """)
             self._conn.commit()
+
+            # ── Auto-migrations (safe to run every startup) ────────────────
+            migrations = [
+                "ALTER TABLE rooms ADD COLUMN invite_hash TEXT NOT NULL DEFAULT ''",
+                # Drop old password_hash col: SQLite doesn’t support DROP COLUMN
+                # before 3.35, so we just ignore it if it exists.
+            ]
+            for sql in migrations:
+                try:
+                    self._conn.execute(sql)
+                    self._conn.commit()
+                    logger.info("DB migration applied: %s", sql[:60])
+                except Exception:
+                    pass   # column / table already exists
+
         logger.debug("Database tables verified / created.")
 
     @staticmethod
@@ -212,36 +237,56 @@ class Database:
     # Room operations
     # ------------------------------------------------------------------
 
-    def create_room(self, room_name: str, created_by: str) -> tuple[bool, str]:
+    @staticmethod
+    def _generate_invite_code(length: int = 8) -> str:
+        """Generate a cryptographically secure alphanumeric invite code."""
+        alphabet = string.ascii_uppercase + string.digits
+        return "".join(secrets.choice(alphabet) for _ in range(length))
+
+    def create_room(self, room_name: str, created_by: str) -> tuple[bool, str, str]:
         """
-        Persist a new chat room.
+        Create a new room, auto-generate an invite code, and make the
+        creator a permanent member.
 
         Returns
         -------
-        (True,  "Room '<name>' created.")  on success
-        (False, "<reason>")                on failure
+        (True,  "Room '<name>' created.", plaintext_code)  on success
+        (False, "<reason>",               "")              on failure
         """
         if not room_name or not room_name.strip():
-            return False, "Room name cannot be empty."
+            return False, "Room name cannot be empty.", ""
         if len(room_name) > 64:
-            return False, "Room name must be 64 characters or fewer."
+            return False, "Room name must be 64 characters or fewer.", ""
 
-        room_name = room_name.strip()
+        room_name   = room_name.strip()
+        invite_code = self._generate_invite_code()
+        invite_hash = self._hash_password(invite_code)   # reuse SHA-256 helper
+        now         = self._now_utc()
 
         with self._lock:
             try:
                 self._conn.execute(
-                    "INSERT INTO rooms (room_name, created_by) VALUES (?, ?)",
-                    (room_name, created_by),
+                    "INSERT INTO rooms (room_name, created_by, invite_hash)"
+                    " VALUES (?, ?, ?)",
+                    (room_name, created_by, invite_hash),
+                )
+                # Creator is automatically a member.
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO room_members (room_name, username, joined_at)"
+                    " VALUES (?, ?, ?)",
+                    (room_name, created_by, now),
                 )
                 self._conn.commit()
-                logger.info("Room created: '%s' by %s", room_name, created_by)
-                return True, f"Room '{room_name}' created."
+                logger.info(
+                    "Room created: '%s' by %s (code=%s)",
+                    room_name, created_by, invite_code,
+                )
+                return True, f"Room '{room_name}' created.", invite_code
             except sqlite3.IntegrityError:
-                return False, f"Room '{room_name}' already exists."
+                return False, f"Room '{room_name}' already exists.", ""
             except sqlite3.Error as exc:
                 logger.error("create_room DB error: %s", exc)
-                return False, "Database error while creating room."
+                return False, "Database error while creating room.", ""
 
     def room_exists(self, room_name: str) -> bool:
         """Return True if the room exists in the database."""
@@ -252,18 +297,92 @@ class Database:
             ).fetchone()
             return row is not None
 
-    def get_all_rooms(self) -> list[dict]:
-        """
-        Return a list of all rooms.
+    def is_room_member(self, room_name: str, username: str) -> bool:
+        """Return True if `username` is a permanent member of `room_name`."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT 1 FROM room_members WHERE room_name = ? AND username = ?",
+                (room_name.strip(), username.strip()),
+            ).fetchone()
+            return row is not None
 
-        Each entry is a dict: { "room_name": str, "created_by": str }
+    def add_room_member(self, room_name: str, username: str) -> bool:
+        """Add `username` as a permanent member of `room_name`. Idempotent."""
+        now = self._now_utc()
+        with self._lock:
+            try:
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO room_members (room_name, username, joined_at)"
+                    " VALUES (?, ?, ?)",
+                    (room_name.strip(), username.strip(), now),
+                )
+                self._conn.commit()
+                return True
+            except sqlite3.Error as exc:
+                logger.error("add_room_member DB error: %s", exc)
+                return False
+
+    def check_room_code(self, room_name: str, code: str) -> bool:
+        """
+        Verify whether `code` matches the invite code for `room_name`.
+
+        Returns True if correct, False if wrong or room doesn't exist.
         """
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT room_name, created_by FROM rooms ORDER BY room_name ASC"
-            ).fetchall()
-            return [{"room_name": r["room_name"], "created_by": r["created_by"]}
-                    for r in rows]
+            row = self._conn.execute(
+                "SELECT invite_hash FROM rooms WHERE room_name = ?",
+                (room_name.strip(),),
+            ).fetchone()
+
+        if row is None:
+            return False
+        return self._hash_password(code.strip()) == row["invite_hash"]
+
+    def get_all_rooms(self, username: str = "") -> list[dict]:
+        """
+        Return rooms the user is a member of (or all rooms if no username given).
+
+        Each entry: { "room_name": str, "created_by": str, "is_member": bool }
+        """
+        with self._lock:
+            if username:
+                # Only rooms where the user is a member.
+                rows = self._conn.execute(
+                    "SELECT r.room_name, r.created_by, 1 AS is_member"
+                    " FROM rooms r"
+                    " JOIN room_members m ON m.room_name = r.room_name"
+                    " WHERE m.username = ?"
+                    " ORDER BY r.room_name ASC",
+                    (username,),
+                ).fetchall()
+            else:
+                rows = self._conn.execute(
+                    "SELECT room_name, created_by, 0 AS is_member"
+                    " FROM rooms ORDER BY room_name ASC"
+                ).fetchall()
+
+            return [
+                {
+                    "room_name":  r["room_name"],
+                    "created_by": r["created_by"],
+                    "is_member":  bool(r["is_member"]),
+                }
+                for r in rows
+            ]
+
+    def get_room_by_code(self, code: str) -> str | None:
+        """
+        Look up the room name whose invite code matches `code`.
+
+        Returns the room_name string on success, or None if no room matches.
+        """
+        code_hash = self._hash_password(code.strip().upper())
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT room_name FROM rooms WHERE invite_hash = ?",
+                (code_hash,),
+            ).fetchone()
+        return row["room_name"] if row else None
 
     # ------------------------------------------------------------------
     # Message operations

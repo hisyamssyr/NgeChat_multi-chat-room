@@ -50,9 +50,10 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSlot
 from PyQt6.QtGui import QFont, QKeyEvent
+from PyQt6.QtWidgets import QMenu
 
 from client.network_client import NetworkClient
-from client.gui.dialogs import CreateRoomDialog, PrivateMsgDialog
+from client.gui.dialogs import CreateRoomDialog, PrivateMsgDialog, JoinPasswordDialog, RoomCodeDialog
 from client.gui.styles import (
     BLUE, GREEN, RED, PURPLE, AMBER,
     TEXT, TEXT_MUTED, BG_SURFACE, BG_ELEVATED, BORDER,
@@ -279,11 +280,12 @@ class MainWindow(QMainWindow):
         self._network          = network
         self._username         = username
         self._current_room: str | None = None
-        self._current_pm_target: str | None = None   # PM mode when set
+        self._current_pm_target: str | None = None
         self._joined_rooms: set[str]   = set()
-        self._room_logs: dict[str, list[str]] = {}   # room  → [html, …]
-        self._pm_logs:   dict[str, list[str]] = {}   # user  → [html, …]
-        self._logged_out = False   # prevent double-logout on close
+        self._room_logs: dict[str, list[str]] = {}
+        self._pm_logs:   dict[str, list[str]] = {}
+        self._room_meta: dict[str, dict]      = {}   # room → {has_password, …}
+        self._logged_out = False
 
         self.setWindowTitle(f"Multi-Chat Room  —  {username}")
         self.setMinimumSize(900, 620)
@@ -376,15 +378,24 @@ class MainWindow(QMainWindow):
         self._room_list.itemClicked.connect(self._on_room_clicked)
         lv.addWidget(self._room_list, stretch=1)
 
-        new_room_btn = QPushButton("＋  New Room")
-        new_room_btn.setObjectName("accent_btn")
-        new_room_btn.setFixedHeight(34)
-        new_room_btn.setContentsMargins(10, 0, 10, 0)
-        new_room_btn.setStyleSheet(
-            f"margin: 6px 10px; border-radius: 6px;"
+        # ── Room action button (dropdown: Create / Join) ──────────────
+        add_btn = QPushButton("＋  Add Room  ▾")
+        add_btn.setObjectName("accent_btn")
+        add_btn.setFixedHeight(34)
+        add_btn.setStyleSheet("margin: 6px 10px; border-radius: 6px;")
+
+        add_menu = QMenu(add_btn)
+        add_menu.setStyleSheet(
+            "QMenu { background:#161b22; border:1px solid #30363d; color:#c9d1d9; }"
+            "QMenu::item { padding:8px 20px; }"
+            "QMenu::item:selected { background:#238636; border-radius:4px; }"
         )
-        new_room_btn.clicked.connect(self._on_create_room)
-        lv.addWidget(new_room_btn)
+        act_create = add_menu.addAction("🏠  Create New Room")
+        act_join   = add_menu.addAction("🔑  Join with Invite Code")
+        act_create.triggered.connect(self._on_create_room)
+        act_join.triggered.connect(self._on_join_by_code)
+        add_btn.setMenu(add_menu)
+        lv.addWidget(add_btn)
 
         # ── Center panel: chat ────────────────────────────────────────
         chat_frame = QFrame()
@@ -517,10 +528,29 @@ class MainWindow(QMainWindow):
 
         # ── Status responses (ok / error) ──────────────────────────────
         if status == "ok":
-            msg = packet.get("message", "")
-            self._status_bar.showMessage(f"✓  {msg}", 4000)
-            # If we just joined a room, mark it as joined.
-            if "Joined room" in msg:
+            msg       = packet.get("message", "")
+            room_code = packet.get("room_code")
+            room_name = packet.get("room_name", "")
+
+            if room_code:
+                # Room was just created — show invite code dialog.
+                dlg = RoomCodeDialog(room_name=room_name, code=room_code, parent=self)
+                dlg.exec()
+                QTimer.singleShot(300, self._network.send_get_rooms)
+                QTimer.singleShot(600, lambda rn=room_name: self._switch_to_room(rn))
+            elif room_name and "Joined room" in msg:
+                # join_by_code success — refresh list then switch.
+                meta = self._room_meta.get(room_name, {})
+                meta["is_member"] = True
+                self._room_meta[room_name] = meta
+                self._joined_rooms.add(room_name)
+                QTimer.singleShot(300, self._network.send_get_rooms)
+                QTimer.singleShot(600, lambda rn=room_name: self._switch_to_room(rn))
+            else:
+                self._status_bar.showMessage(f"✓  {msg}", 4000)
+
+            # Standard join confirmation (join_room handler).
+            if "Joined room" in msg and not room_name:
                 room = msg.split("'")[1] if "'" in msg else self._current_room
                 if room:
                     self._joined_rooms.add(room)
@@ -531,6 +561,13 @@ class MainWindow(QMainWindow):
             msg = packet.get("message", "Error")
             self._status_bar.showMessage(f"✗  {msg}", 5000)
             self._append_to_chat(_html_system(f"✗  {msg}", RED))
+            # Roll back optimistic room join on auth failure.
+            if msg == "Wrong invite code." and self._current_room:
+                self._joined_rooms.discard(self._current_room)
+                self._current_room = None
+                self._room_name_label.setText("Select a room →")
+                self._leave_btn.setText("Leave Room")
+                self._refresh_room_list_ui()
             return
 
         # ── Room broadcast push ────────────────────────────────────────
@@ -665,7 +702,13 @@ class MainWindow(QMainWindow):
         self._room_list.clear()
         for r in rooms:
             name = r.get("room_name", "")
-            icon = "🟢" if name in self._joined_rooms else "💬"
+            self._room_meta[name] = r
+            if name in self._joined_rooms:
+                icon = "🟢"   # joined this session
+            elif r.get("is_member"):
+                icon = "🟤"   # member, not yet joined this session
+            else:
+                icon = "🔒"   # need invite code
             item = QListWidgetItem(f"  {icon}  {name}")
             item.setData(Qt.ItemDataRole.UserRole, name)
             self._room_list.addItem(item)
@@ -676,7 +719,13 @@ class MainWindow(QMainWindow):
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             name = item.data(Qt.ItemDataRole.UserRole)
-            icon = "🟢" if name in self._joined_rooms else "💬"
+            meta = self._room_meta.get(name, {})
+            if name in self._joined_rooms:
+                icon = "🟢"
+            elif meta.get("is_member"):
+                icon = "🟤"
+            else:
+                icon = "🔒"
             item.setText(f"  {icon}  {name}")
         self._highlight_current_room()
 
@@ -768,32 +817,43 @@ class MainWindow(QMainWindow):
         room = item.data(Qt.ItemDataRole.UserRole)
         if not room:
             return
-        # Leave PM mode when a room is selected.
         self._current_pm_target = None
         self._user_list.clearSelection()
-        self._switch_to_room(room)
 
-    def _switch_to_room(self, room: str) -> None:
-        """Join (if needed) and switch the chat display to `room`."""
+        meta = self._room_meta.get(room, {})
+        is_member = meta.get("is_member", False) or room in self._joined_rooms
+
+        if not is_member:
+            # Not a member — show invite code dialog.
+            dlg = JoinPasswordDialog(room_name=room, parent=self)
+            if dlg.exec() != dlg.DialogCode.Accepted:
+                return
+            # Mark as member optimistically; server will reject if wrong.
+            self._room_meta.setdefault(room, {})["is_member"] = True
+            self._switch_to_room(room, password=dlg.password)
+        else:
+            self._switch_to_room(room)
+
+    def _switch_to_room(self, room: str, password: str = "") -> None:
+        """Join (if needed) and switch the chat display to `room`.
+
+        `password` is the invite code for new members (empty for existing members).
+        """
         self._current_pm_target = None
         self._current_room = room
         self._room_name_label.setText(f"#  {room}")
         self._leave_btn.setText("Leave Room")
 
-        # Clear unread badge.
         self._highlight_current_room()
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == room:
-                icon = "🟢" if room in self._joined_rooms else "💬"
-                item.setText(f"  {icon}  {room}")
+                item.setText(f"  🟢  {room}")
 
-        # Reload stored messages for this room.
         self._reload_chat()
 
-        # Join if not already a member.
         if room not in self._joined_rooms:
-            self._network.send_join_room(room)
+            self._network.send_join_room(room, password)
             self._joined_rooms.add(room)
             self._refresh_room_list_ui()
 
@@ -818,10 +878,18 @@ class MainWindow(QMainWindow):
     def _on_create_room(self) -> None:
         dlg = CreateRoomDialog(parent=self)
         if dlg.exec() == dlg.DialogCode.Accepted:
-            room = dlg.room_name
-            self._network.send_create_room(room)
-            # Refresh room list after a short delay.
-            QTimer.singleShot(500, self._network.send_get_rooms)
+            self._network.send_create_room(dlg.room_name)
+            # Room list refresh & code display handled in on_packet (room_code field).
+
+    def _on_join_by_code(self) -> None:
+        """Show invite-code dialog; send join_by_code to server."""
+        dlg = JoinPasswordDialog(room_name="", parent=self)
+        # Patch the title / hint for standalone join flow.
+        dlg.setWindowTitle("Join a Room")
+        if dlg.exec() == dlg.DialogCode.Accepted:
+            code = dlg.password.strip().upper()
+            if code:
+                self._network.send_join_by_code(code)
 
     def _on_leave_room(self) -> None:
         if self._current_pm_target:
