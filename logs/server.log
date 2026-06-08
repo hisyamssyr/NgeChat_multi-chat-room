@@ -740,3 +740,31 @@ TypeError: execute() argument 1 must be str, not tuple
 2026-06-09 06:28:43  INFO      __main__                        Client 127.0.0.1:56803 disconnected.
 2026-06-09 06:28:43  INFO      server.room_manager             User went offline: tes3 (was in rooms: ['room_tes2'])
 2026-06-09 06:28:43  INFO      __main__                        Cleaned up session for 'tes3' (was in: ['room_tes2']).
+2026-06-09 06:52:42  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-09 06:52:42  INFO      server.database                 DB migration applied: CREATE TABLE IF NOT EXISTS friends (
+                    use
+2026-06-09 06:52:42  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-09 06:52:42  INFO      __main__                        ==========================================
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+==========================================
+2026-06-09 06:53:26  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-09 06:53:26  INFO      server.database                 DB migration applied: CREATE TABLE IF NOT EXISTS friends (
+                    use
+2026-06-09 06:53:26  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-09 06:53:26  INFO      __main__                        
+======================================
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+==========================================
+2026-06-09 06:54:00  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-09 06:54:00  INFO      server.database                 DB migration applied: CREATE TABLE IF NOT EXISTS friends (
+                    use
+2026-06-09 06:54:00  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-09 06:54:00  INFO      __main__                        
+==========================================  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+==========================================

@@ -494,11 +494,11 @@ class ChatServer:
         self._running = True
 
         logger.info(
-            "╔══════════════════════════════════════════╗\n"
+            "\n==========================================\n"
             "  Multi-Chat Room Server started\n"
             "  Listening on %s:%d\n"
             "  Press Ctrl+C to stop.\n"
-            "╚══════════════════════════════════════════╝",
+            "==========================================",
             self._host, self._port,
         )
 
