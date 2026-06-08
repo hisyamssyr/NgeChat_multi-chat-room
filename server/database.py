@@ -1,22 +1,3 @@
-    # server/database.py
-    # ------------------
-    # Database Access Layer for the Multi-Chat Room Server.
-    # Responsibilities:
-    # - Create and initialise all SQLite tables on first run.
-    # - Provide thread-safe CRUD operations for users, rooms, and messages.
-    # - Hash passwords with SHA-256 before storage (never store plaintext).
-    # Thread safety:
-    # - A single threading.Lock (_lock) serialises every write operation.
-    # - SQLite is opened with check_same_thread=False so that the one
-    # connection object can be shared across ClientHandler threads.
-    # - All public methods acquire _lock for the duration of the call, which
-    # is safe because SQLite itself is not re-entered concurrently.
-    # Extensibility notes:
-    # - To migrate to PostgreSQL/MySQL later, replace the sqlite3 calls here
-    # without touching any other module.
-    # - Message history is capped at HISTORY_LIMIT rows per room to avoid
-    # flooding newly-joined clients with thousands of old messages.
-
 import sqlite3
 import hashlib
 import threading
@@ -28,10 +9,8 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-# Maximum number of historical messages sent to a client on room join.
 HISTORY_LIMIT = 50
 
-# Resolved at import time so server.py can control the DB path.
 _DEFAULT_DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "database",
@@ -40,12 +19,12 @@ _DEFAULT_DB_PATH = os.path.join(
 
 
 class Database:
-        # Thread-safe SQLite database interface.
-    # Usage
-    # -----
-    # db = Database()          # uses default path
-    # db = Database("/custom/path/chat.db")
-    # db.initialise()          # must be called once before any other method
+    """Thread-safe SQLite interface for the chat server.
+
+    A single threading.Lock serialises every write so the one connection
+    object can be shared safely across ClientHandler threads
+    (check_same_thread=False).
+    """
 
     def __init__(self, db_path: str = _DEFAULT_DB_PATH) -> None:
         self._db_path = db_path
@@ -57,23 +36,20 @@ class Database:
     # ------------------------------------------------------------------
 
     def initialise(self) -> None:
-            # Open the SQLite connection and create all tables if they do not
-    # already exist.  Must be called once before any other method.
         os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
 
         self._conn = sqlite3.connect(
             self._db_path,
-            check_same_thread=False,   # we guard access with _lock
+            check_same_thread=False,  # guarded by _lock
         )
-        self._conn.row_factory = sqlite3.Row  # allow column-name access
-        self._conn.execute("PRAGMA journal_mode=WAL;")   # better concurrency
+        self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL;")  # better concurrency under load
         self._conn.execute("PRAGMA foreign_keys=ON;")
 
         self._create_tables()
         logger.info("Database initialised at %s", self._db_path)
 
     def close(self) -> None:
-            # Gracefully close the database connection.
         if self._conn:
             with self._lock:
                 self._conn.close()
@@ -85,11 +61,8 @@ class Database:
     # ------------------------------------------------------------------
 
     def _create_tables(self) -> None:
-            # Create schema tables (idempotent — safe to call on every start).
         with self._lock:
-            cur = self._conn.cursor()
-
-            cur.executescript("""
+            self._conn.cursor().executescript("""
                 CREATE TABLE IF NOT EXISTS users (
                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
                     username      TEXT    UNIQUE NOT NULL,
@@ -128,7 +101,8 @@ class Database:
             """)
             self._conn.commit()
 
-            # ── Auto-migrations (safe to run every startup) ────────────────
+            # Safe to run every startup — each statement is idempotent or will
+            # silently fail if the column/table already exists.
             migrations = [
                 "ALTER TABLE rooms ADD COLUMN invite_code TEXT NOT NULL DEFAULT ''",
                 """CREATE TABLE IF NOT EXISTS friends (
@@ -138,9 +112,9 @@ class Database:
                     added_at TEXT NOT NULL,
                     PRIMARY KEY (username, friend)
                 )""",
+                # SQLite < 3.35 does not support DROP COLUMN; adding the status
+                # column to existing databases is the only migration needed here.
                 "ALTER TABLE friends ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'",
-                # Drop old password_hash col: SQLite doesn’t support DROP COLUMN
-                # before 3.35, so we just ignore it if it exists.
             ]
             for sql in migrations:
                 try:
@@ -148,18 +122,16 @@ class Database:
                     self._conn.commit()
                     logger.info("DB migration applied: %s", sql[:60])
                 except Exception:
-                    pass   # column / table already exists
+                    pass  # column / table already exists
 
         logger.debug("Database tables verified / created.")
 
     @staticmethod
     def _hash_password(password: str) -> str:
-            # Return a SHA-256 hex digest of the given plaintext password.
         return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
     @staticmethod
     def _now_utc() -> str:
-            # Return the current UTC time as an ISO-8601 string.
         return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     # ------------------------------------------------------------------
@@ -167,11 +139,6 @@ class Database:
     # ------------------------------------------------------------------
 
     def register_user(self, username: str, password: str) -> tuple[bool, str]:
-            # Register a new user account.
-    # Returns
-    # -------
-    # (True,  "Registration successful.")  on success
-    # (False, "<reason>")                  on failure
         if not username or not username.strip():
             return False, "Username cannot be empty."
         if not password:
@@ -198,11 +165,6 @@ class Database:
                 return False, "Database error during registration."
 
     def validate_login(self, username: str, password: str) -> tuple[bool, str]:
-            # Verify login credentials.
-    # Returns
-    # -------
-    # (True,  "Login successful.")  on success
-    # (False, "<reason>")           on failure
         if not username or not password:
             return False, "Username and password are required."
 
@@ -225,7 +187,6 @@ class Database:
                 return False, "Database error during login."
 
     def user_exists(self, username: str) -> bool:
-            # Return True if the username exists in the database.
         with self._lock:
             row = self._conn.execute(
                 "SELECT 1 FROM users WHERE username = ?",
@@ -239,17 +200,10 @@ class Database:
 
     @staticmethod
     def _generate_invite_code(length: int = 8) -> str:
-            # Generate a cryptographically secure alphanumeric invite code.
         alphabet = string.ascii_uppercase + string.digits
         return "".join(secrets.choice(alphabet) for _ in range(length))
 
     def create_room(self, room_name: str, created_by: str) -> tuple[bool, str, str]:
-            # Create a new room, auto-generate an invite code, and make the
-    # creator a permanent member.
-    # Returns
-    # -------
-    # (True,  "Room '<name>' created.", plaintext_code)  on success
-    # (False, "<reason>",               "")              on failure
         if not room_name or not room_name.strip():
             return False, "Room name cannot be empty.", ""
         if len(room_name) > 64:
@@ -257,27 +211,22 @@ class Database:
 
         room_name   = room_name.strip()
         invite_code = self._generate_invite_code()
-        invite_hash = self._hash_password(invite_code)   # reuse SHA-256 helper
         now         = self._now_utc()
 
         with self._lock:
             try:
                 self._conn.execute(
-                    "INSERT INTO rooms (room_name, created_by, invite_code)"
-                    " VALUES (?, ?, ?)",
+                    "INSERT INTO rooms (room_name, created_by, invite_code) VALUES (?, ?, ?)",
                     (room_name, created_by, invite_code),
                 )
-                # Creator is automatically a member.
+                # Creator is automatically a permanent member.
                 self._conn.execute(
                     "INSERT OR IGNORE INTO room_members (room_name, username, joined_at)"
                     " VALUES (?, ?, ?)",
                     (room_name, created_by, now),
                 )
                 self._conn.commit()
-                logger.info(
-                    "Room created: '%s' by %s (code=%s)",
-                    room_name, created_by, invite_code,
-                )
+                logger.info("Room created: '%s' by %s (code=%s)", room_name, created_by, invite_code)
                 return True, f"Room '{room_name}' created.", invite_code
             except sqlite3.IntegrityError:
                 return False, f"Room '{room_name}' already exists.", ""
@@ -286,7 +235,6 @@ class Database:
                 return False, "Database error while creating room.", ""
 
     def room_exists(self, room_name: str) -> bool:
-            # Return True if the room exists in the database.
         with self._lock:
             row = self._conn.execute(
                 "SELECT 1 FROM rooms WHERE room_name = ?",
@@ -295,7 +243,6 @@ class Database:
             return row is not None
 
     def is_room_member(self, room_name: str, username: str) -> bool:
-            # Return True if `username` is a permanent member of `room_name`.
         with self._lock:
             row = self._conn.execute(
                 "SELECT 1 FROM room_members WHERE room_name = ? AND username = ?",
@@ -304,7 +251,6 @@ class Database:
             return row is not None
 
     def add_room_member(self, room_name: str, username: str) -> bool:
-            # Add `username` as a permanent member of `room_name`. Idempotent.
         now = self._now_utc()
         with self._lock:
             try:
@@ -320,7 +266,6 @@ class Database:
                 return False
 
     def remove_room_member(self, room_name: str, username: str) -> bool:
-        # Remove `username` permanently from `room_name`
         with self._lock:
             try:
                 self._conn.execute(
@@ -334,22 +279,19 @@ class Database:
                 return False
 
     def delete_room(self, room_name: str, username: str) -> tuple[bool, str]:
-        # Delete room, its members, and its messages (only if username is created_by).
         room_name = room_name.strip()
-        username = username.strip()
+        username  = username.strip()
         with self._lock:
-            # Check ownership
             row = self._conn.execute(
                 "SELECT created_by FROM rooms WHERE room_name = ?",
-                (room_name,)
+                (room_name,),
             ).fetchone()
-            
+
             if not row:
                 return False, f"Room '{room_name}' does not exist."
-            
             if row["created_by"] != username:
                 return False, "Only the room owner can delete this room."
-                
+
             try:
                 self._conn.execute("DELETE FROM rooms WHERE room_name = ?", (room_name,))
                 self._conn.execute("DELETE FROM room_members WHERE room_name = ?", (room_name,))
@@ -362,8 +304,6 @@ class Database:
                 return False, "Database error during room deletion."
 
     def check_room_code(self, room_name: str, code: str) -> bool:
-            # Verify whether `code` matches the invite code for `room_name`.
-    # Returns True if correct, False if wrong or room doesn't exist.
         with self._lock:
             row = self._conn.execute(
                 "SELECT invite_code FROM rooms WHERE room_name = ?",
@@ -375,11 +315,8 @@ class Database:
         return code.strip().upper() == row["invite_code"]
 
     def get_all_rooms(self, username: str = "") -> list[dict]:
-            # Return rooms the user is a member of (or all rooms if no username given).
-    # Each entry: { "room_name": str, "created_by": str, "is_member": bool }
         with self._lock:
             if username:
-                # Only rooms where the user is a member.
                 rows = self._conn.execute(
                     "SELECT r.room_name, r.created_by, r.invite_code, 1 AS is_member"
                     " FROM rooms r"
@@ -405,8 +342,6 @@ class Database:
             ]
 
     def get_room_by_code(self, code: str) -> str | None:
-            # Look up the room name whose invite code matches `code`.
-    # Returns the room_name string on success, or None if no room matches.
         code = code.strip().upper()
         with self._lock:
             row = self._conn.execute(
@@ -426,11 +361,6 @@ class Database:
         message: str,
         timestamp: str | None = None,
     ) -> bool:
-            # Persist a broadcast message.
-    # Parameters
-    # ----------
-    # timestamp : optional ISO-8601 string; auto-generated (UTC) if None.
-    # Returns True on success, False on error.
         if timestamp is None:
             timestamp = self._now_utc()
 
@@ -448,10 +378,8 @@ class Database:
                 return False
 
     def get_room_history(self, room_name: str, limit: int = HISTORY_LIMIT) -> list[dict]:
-        # Fetch the most recent `limit` messages for a room, ordered oldest-first
-        # so the client can display them chronologically.
-        # Each entry is a dict:
-        # { "sender": str, "message": str, "timestamp": str }
+        # Fetch the most recent `limit` messages ordered oldest-first so the
+        # client can render them chronologically without reversing the list.
         with self._lock:
             rows = self._conn.execute(
                 """
@@ -476,15 +404,19 @@ class Database:
                 for r in rows
             ]
 
+    # ------------------------------------------------------------------
+    # Friend operations
+    # ------------------------------------------------------------------
+
     def send_friend_request(self, username: str, friend: str) -> tuple[bool, str]:
-        # Create a pending friend request from `username` to `friend`.
         if username == friend:
             return False, "You cannot add yourself as a friend."
         if not self.user_exists(friend):
             return False, f"User '{friend}' does not exist."
+
         now = self._now_utc()
         with self._lock:
-            # Check if a request already exists in either direction
+            # Block duplicate requests in either direction before attempting insert.
             row = self._conn.execute(
                 "SELECT status FROM friends WHERE (username = ? AND friend = ?)"
                 " OR (username = ? AND friend = ?)",
@@ -503,13 +435,12 @@ class Database:
                 self._conn.commit()
                 return True, f"Friend request sent to '{friend}'."
             except sqlite3.IntegrityError:
-                return False, f"A friend request already exists."
+                return False, "A friend request already exists."
             except sqlite3.Error as exc:
                 logger.error("send_friend_request DB error: %s", exc)
                 return False, "Database error."
 
     def accept_friend_request(self, username: str, requester: str) -> tuple[bool, str]:
-        # Accept a pending request from `requester` to `username`.
         now = self._now_utc()
         with self._lock:
             row = self._conn.execute(
@@ -519,12 +450,11 @@ class Database:
             if not row or row["status"] != "pending":
                 return False, f"No pending request from '{requester}'."
             try:
-                # Mark the request as accepted
                 self._conn.execute(
                     "UPDATE friends SET status = 'accepted' WHERE username = ? AND friend = ?",
                     (requester, username),
                 )
-                # Add the reverse entry so both sides see each other
+                # Insert the reverse row so both sides appear in each other's list.
                 self._conn.execute(
                     "INSERT OR IGNORE INTO friends (username, friend, status, added_at)"
                     " VALUES (?, ?, 'accepted', ?)",
@@ -537,7 +467,6 @@ class Database:
                 return False, "Database error."
 
     def decline_friend_request(self, username: str, requester: str) -> tuple[bool, str]:
-        # Decline/cancel a pending request from `requester` to `username`.
         with self._lock:
             cur = self._conn.execute(
                 "DELETE FROM friends WHERE username = ? AND friend = ? AND status = 'pending'",
@@ -549,7 +478,7 @@ class Database:
             return True, f"Friend request from '{requester}' declined."
 
     def remove_friend(self, username: str, friend: str) -> tuple[bool, str]:
-        # Remove an accepted friendship (both directions).
+        # Deletes both directions so neither user sees the other anymore.
         with self._lock:
             try:
                 self._conn.execute(
@@ -564,7 +493,6 @@ class Database:
                 return False, "Database error."
 
     def get_friends(self, username: str) -> list[str]:
-        # Return accepted friends for `username`.
         with self._lock:
             rows = self._conn.execute(
                 "SELECT friend FROM friends WHERE username = ? AND status = 'accepted'"
@@ -574,7 +502,6 @@ class Database:
             return [r["friend"] for r in rows]
 
     def get_pending_sent(self, username: str) -> list[str]:
-        # Return usernames to whom `username` sent pending requests.
         with self._lock:
             rows = self._conn.execute(
                 "SELECT friend FROM friends WHERE username = ? AND status = 'pending'"
@@ -584,11 +511,9 @@ class Database:
             return [r["friend"] for r in rows]
 
     def is_friend(self, username: str, friend: str) -> bool:
-        # Return True if the two users are accepted friends.
         with self._lock:
             row = self._conn.execute(
                 "SELECT 1 FROM friends WHERE username = ? AND friend = ? AND status = 'accepted'",
                 (username, friend),
             ).fetchone()
             return row is not None
-

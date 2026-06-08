@@ -1,5 +1,3 @@
-# Main 3-panel chat window for the Multi-Chat Room GUI.
-
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -10,29 +8,35 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QListWidget, QListWidgetItem,
     QTextBrowser, QTextEdit, QFrame, QSplitter, QStatusBar,
-    QSizePolicy,
+    QSizePolicy, QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSlot
 from PyQt6.QtGui import QFont, QKeyEvent
-from PyQt6.QtWidgets import QMenu
 
 from client.network_client import NetworkClient
-from client.gui.dialogs import CreateRoomDialog, PrivateMsgDialog, JoinPasswordDialog, RoomCodeDialog, AddFriendDialog
+from client.gui.dialogs import (
+    CreateRoomDialog, PrivateMsgDialog, JoinPasswordDialog,
+    RoomCodeDialog, AddFriendDialog,
+)
 from client.gui.styles import (
     BLUE, GREEN, RED, PURPLE, AMBER,
     TEXT, TEXT_MUTED, BG_SURFACE, BG_ELEVATED, BORDER,
     OWN_MSG_BG, PM_BG, NOTIF_COLOR,
 )
 
+
+# ---------------------------------------------------------------------------
+# HTML rendering helpers
+# ---------------------------------------------------------------------------
+
 def _fmt_ts(timestamp: str) -> str:
-    # '2026-06-08 14:01:33 UTC' → '14:01'.
     try:
         return timestamp.split(" ")[1][:5]
     except Exception:
         return ""
 
+
 def _escape(text: str) -> str:
-    # HTML-escape user text and convert newlines to <br/>.
     return (
         text.replace("&", "&amp;")
             .replace("<", "&lt;")
@@ -40,9 +44,8 @@ def _escape(text: str) -> str:
             .replace("\n", "<br/>")
     )
 
-def _html_broadcast(sender: str, message: str, timestamp: str,
-                    is_own: bool) -> str:
-    # WhatsApp-style chat bubble — right for own, left for others.
+
+def _html_broadcast(sender: str, message: str, timestamp: str, is_own: bool) -> str:
     ts  = _fmt_ts(timestamp)
     msg = _escape(message)
 
@@ -68,32 +71,31 @@ def _html_broadcast(sender: str, message: str, timestamp: str,
             '</tr>'
             '</table>'
         )
-    else:
-        return (
-            '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-            ' style="margin:3px 0;">'
-            '<tr>'
-            '<td align="left" style="padding:0 0 0 10px;">'
-            f'<div style="'
-            f'display:inline-block;'
-            f'background-color:#21262d;'
-            f'border-radius:2px 16px 16px 16px;'
-            f'padding:10px 14px 7px 14px;'
-            f'max-width:80%;'
-            f'">'
-            f'<div style="color:#58a6ff; font-size:11px; font-weight:bold;'
-            f' margin-bottom:4px;">{_escape(sender)}</div>'
-            f'<div style="color:#c9d1d9; font-size:13px;">{msg}</div>'
-            f'<div style="color:#6e7681; font-size:10px; margin-top:5px;">{ts}</div>'
-            '</div>'
-            '</td>'
-            '<td width="20%"></td>'
-            '</tr>'
-            '</table>'
-        )
+    return (
+        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+        ' style="margin:3px 0;">'
+        '<tr>'
+        '<td align="left" style="padding:0 0 0 10px;">'
+        f'<div style="'
+        f'display:inline-block;'
+        f'background-color:#21262d;'
+        f'border-radius:2px 16px 16px 16px;'
+        f'padding:10px 14px 7px 14px;'
+        f'max-width:80%;'
+        f'">'
+        f'<div style="color:#58a6ff; font-size:11px; font-weight:bold;'
+        f' margin-bottom:4px;">{_escape(sender)}</div>'
+        f'<div style="color:#c9d1d9; font-size:13px;">{msg}</div>'
+        f'<div style="color:#6e7681; font-size:10px; margin-top:5px;">{ts}</div>'
+        '</div>'
+        '</td>'
+        '<td width="20%"></td>'
+        '</tr>'
+        '</table>'
+    )
+
 
 def _html_private(sender: str, message: str, timestamp: str) -> str:
-    # Purple bubble for incoming private messages.
     ts  = _fmt_ts(timestamp)
     msg = _escape(message)
     return (
@@ -121,8 +123,8 @@ def _html_private(sender: str, message: str, timestamp: str) -> str:
         '</table>'
     )
 
+
 def _html_notification(message: str) -> str:
-    # Centered system notification (join / leave / disconnect).
     msg = _escape(message)
     return (
         '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
@@ -142,8 +144,8 @@ def _html_notification(message: str) -> str:
         '</table>'
     )
 
+
 def _html_history_separator(room: str) -> str:
-    # Divider shown above history messages on room join.
     return (
         '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         ' style="margin:10px 0;">'
@@ -161,8 +163,8 @@ def _html_history_separator(room: str) -> str:
         '</table>'
     )
 
+
 def _html_system(message: str, color: str = TEXT_MUTED) -> str:
-    # Inline system message (errors, status).
     return (
         '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         ' style="margin:4px 0;">'
@@ -174,8 +176,8 @@ def _html_system(message: str, color: str = TEXT_MUTED) -> str:
         '</table>'
     )
 
+
 def _html_pm_out(message: str, timestamp: str) -> str:
-    # Outgoing PM bubble — right-aligned, purple tint (own sent PM).
     ts  = _fmt_ts(timestamp)
     msg = _escape(message)
     return (
@@ -199,8 +201,13 @@ def _html_pm_out(message: str, timestamp: str) -> str:
         '</table>'
     )
 
+
+# ---------------------------------------------------------------------------
+# Custom input widget
+# ---------------------------------------------------------------------------
+
 class _MsgInput(QTextEdit):
-    # QTextEdit that emits send_triggered on Enter (Shift+Enter = newline).
+    """QTextEdit that sends on Enter; Shift+Enter inserts a newline."""
 
     def __init__(self, on_send_callback, parent=None) -> None:
         super().__init__(parent)
@@ -216,22 +223,24 @@ class _MsgInput(QTextEdit):
         else:
             super().keyPressEvent(event)
 
-# MainWindow
+
+# ---------------------------------------------------------------------------
+# Main window
+# ---------------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
-    # 3-panel main chat window wired to NetworkClient signals.
 
     def __init__(self, network: NetworkClient, username: str) -> None:
         super().__init__()
         self._network          = network
         self._username         = username
-        self._current_room: str | None = None
-        self._current_pm_target: str | None = None
-        self._joined_rooms: set[str]   = set()
+        self._current_room: str | None       = None
+        self._current_pm_target: str | None  = None
+        self._joined_rooms: set[str]         = set()
         self._room_logs: dict[str, list[str]] = {}
-        self._pm_logs:   dict[str, list[str]] = {}
-        self._room_meta: dict[str, dict]      = {}  # room → metadata
-        self._friend_data: list[dict]          = []  # [{username, online}]
+        self._pm_logs: dict[str, list[str]]   = {}
+        self._room_meta: dict[str, dict]      = {}
+        self._friend_data: list[dict]         = []
         self._logged_out = False
 
         self.setWindowTitle(f"Multi-Chat Room  —  {username}")
@@ -241,7 +250,6 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._connect_signals()
 
-        # Kick off initial data fetch after the window is shown.
         QTimer.singleShot(300, self._initial_fetch)
 
     # ------------------------------------------------------------------
@@ -261,12 +269,9 @@ class MainWindow(QMainWindow):
         root.addWidget(self._build_body(), stretch=1)
         root.addWidget(self._build_input_bar())
 
-        # Status bar
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
-        self._status_bar.showMessage(
-            f"Connected  •  Logged in as {self._username}"
-        )
+        self._status_bar.showMessage(f"Connected  •  Logged in as {self._username}")
 
     def _build_title_bar(self) -> QFrame:
         bar = QFrame()
@@ -276,19 +281,15 @@ class MainWindow(QMainWindow):
         h.setContentsMargins(16, 0, 16, 0)
         h.setSpacing(12)
 
-        # App title
         title = QLabel("🗨  Multi-Chat Room")
         title.setObjectName("app_title")
         h.addWidget(title)
-
         h.addStretch()
 
-        # Logged-in user label
         user_lbl = QLabel(f"👤  {self._username}")
         user_lbl.setObjectName("username_label")
         h.addWidget(user_lbl)
 
-        # Refresh button
         refresh_btn = QPushButton("↺  Refresh")
         refresh_btn.setObjectName("icon_btn")
         refresh_btn.setFixedWidth(90)
@@ -296,7 +297,6 @@ class MainWindow(QMainWindow):
         refresh_btn.clicked.connect(self._on_refresh)
         h.addWidget(refresh_btn)
 
-        # Logout button
         logout_btn = QPushButton("Logout")
         logout_btn.setObjectName("danger_btn")
         logout_btn.setFixedWidth(80)
@@ -306,13 +306,11 @@ class MainWindow(QMainWindow):
         return bar
 
     def _build_notif_bar(self) -> QFrame:
-        # Inline notification bar for friend requests (hidden by default).
+        """Green inline bar shown when a friend request arrives (hidden by default)."""
         bar = QFrame()
         bar.setObjectName("notif_bar")
         bar.setFixedHeight(44)
-        bar.setStyleSheet(
-            "#notif_bar { background:#1f3a2d; border-bottom:1px solid #2ea043; }"
-        )
+        bar.setStyleSheet("#notif_bar { background:#1f3a2d; border-bottom:1px solid #2ea043; }")
         bar.hide()
 
         h = QHBoxLayout(bar)
@@ -342,11 +340,11 @@ class MainWindow(QMainWindow):
 
         return bar
 
-
     def _build_body(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
 
+        # Left panel — room list
         left = QFrame()
         left.setObjectName("left_panel")
         left.setMinimumWidth(170)
@@ -384,13 +382,13 @@ class MainWindow(QMainWindow):
         add_btn.setMenu(add_menu)
         lv.addWidget(add_btn)
 
+        # Centre panel — chat area
         chat_frame = QFrame()
         chat_frame.setObjectName("chat_frame")
         cv = QVBoxLayout(chat_frame)
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(0)
 
-        # Chat header bar
         chat_header_bar = QFrame()
         chat_header_bar.setObjectName("chat_header_bar")
         chat_header_bar.setFixedHeight(42)
@@ -401,7 +399,6 @@ class MainWindow(QMainWindow):
         self._room_name_label = QLabel("Select a room →")
         self._room_name_label.setObjectName("chat_room_name")
         chh.addWidget(self._room_name_label)
-
         chh.addStretch()
 
         self._leave_btn = QPushButton("Leave Room")
@@ -412,13 +409,13 @@ class MainWindow(QMainWindow):
 
         cv.addWidget(chat_header_bar)
 
-        # Chat area (QTextBrowser — read-only, HTML)
         self._chat_area = QTextBrowser()
         self._chat_area.setObjectName("chat_area")
         self._chat_area.setOpenLinks(False)
         self._chat_area.setReadOnly(True)
         cv.addWidget(self._chat_area, stretch=1)
 
+        # Right panel — friends list
         right = QFrame()
         right.setObjectName("right_panel")
         right.setMinimumWidth(150)
@@ -449,7 +446,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(left)
         splitter.addWidget(chat_frame)
         splitter.addWidget(right)
-        splitter.setStretchFactor(1, 1)   # chat area takes all extra space
+        splitter.setStretchFactor(1, 1)  # chat area takes all extra space
 
         return splitter
 
@@ -461,25 +458,21 @@ class MainWindow(QMainWindow):
         h.setContentsMargins(12, 10, 12, 10)
         h.setSpacing(8)
 
-        # File transfer button (disabled — stub)
         file_btn = QPushButton("📎")
         file_btn.setObjectName("icon_btn")
         file_btn.setToolTip("File Transfer — Coming Soon")
         file_btn.setEnabled(False)
         h.addWidget(file_btn)
 
-        # Voice chat button (disabled — stub)
         voice_btn = QPushButton("🎤")
         voice_btn.setObjectName("icon_btn")
         voice_btn.setToolTip("Voice Chat — Coming Soon")
         voice_btn.setEnabled(False)
         h.addWidget(voice_btn)
 
-        # Message input
         self._msg_input = _MsgInput(on_send_callback=self._on_send)
         h.addWidget(self._msg_input, stretch=1)
 
-        # Send button
         send_btn = QPushButton("Send  ▶")
         send_btn.setObjectName("send_btn")
         send_btn.setFixedWidth(100)
@@ -489,23 +482,19 @@ class MainWindow(QMainWindow):
         return bar
 
     # ------------------------------------------------------------------
-    # Signal wiring
+    # Wiring
     # ------------------------------------------------------------------
 
     def _connect_signals(self) -> None:
         self._network.packet_received.connect(self.on_packet)
         self._network.disconnected_signal.connect(self._on_disconnected)
 
-    # ------------------------------------------------------------------
-    # Initial data fetch
-    # ------------------------------------------------------------------
-
     def _initial_fetch(self) -> None:
         self._network.send_get_rooms()
         self._network.send_get_friends()
 
     # ------------------------------------------------------------------
-    # Packet dispatcher (runs in GUI thread)
+    # Packet handler (runs in the GUI thread via Qt signal)
     # ------------------------------------------------------------------
 
     @pyqtSlot(dict)
@@ -519,13 +508,13 @@ class MainWindow(QMainWindow):
             room_name = packet.get("room_name", "")
 
             if room_code:
-                # Room was just created — show invite code dialog.
+                # Room just created — show code dialog then switch to it.
                 dlg = RoomCodeDialog(room_name=room_name, code=room_code, parent=self)
                 dlg.exec()
                 QTimer.singleShot(300, self._network.send_get_rooms)
                 QTimer.singleShot(600, lambda rn=room_name: self._switch_to_room(rn))
             elif room_name and "Joined room" in msg:
-                # join_by_code success — refresh list then switch.
+                # join_by_code success — refresh list then switch view.
                 meta = self._room_meta.get(room_name, {})
                 meta["is_member"] = True
                 self._room_meta[room_name] = meta
@@ -535,7 +524,7 @@ class MainWindow(QMainWindow):
             else:
                 self._status_bar.showMessage(f"✓  {msg}", 4000)
 
-            # Standard join confirmation (join_room handler).
+            # Standard join_room ack (room_name not included in this path).
             if "Joined room" in msg and not room_name:
                 room = msg.split("'")[1] if "'" in msg else self._current_room
                 if room:
@@ -547,12 +536,12 @@ class MainWindow(QMainWindow):
             msg = packet.get("message", "Error")
             self._status_bar.showMessage(f"✗  {msg}", 5000)
             self._append_to_chat(_html_system(f"✗  {msg}", RED))
-            # Roll back optimistic room join on auth failure.
+            # Roll back optimistic join if the invite code was wrong.
             if msg == "Wrong invite code." and self._current_room:
                 self._joined_rooms.discard(self._current_room)
                 self._current_room = None
                 self._room_name_label.setText("Select a room →")
-                self._leave_btn.setText("Leave Room")
+                self._leave_btn.setText("Close Chat")
                 self._refresh_room_list_ui()
             return
 
@@ -561,8 +550,7 @@ class MainWindow(QMainWindow):
             sender    = packet.get("sender", "?")
             message   = packet.get("message", "")
             timestamp = packet.get("timestamp", "")
-            is_own    = (sender == self._username)
-            html      = _html_broadcast(sender, message, timestamp, is_own)
+            html      = _html_broadcast(sender, message, timestamp, sender == self._username)
             self._store_and_show(room, html)
             return
 
@@ -571,7 +559,6 @@ class MainWindow(QMainWindow):
             message   = packet.get("message", "")
             timestamp = packet.get("timestamp", "")
             html      = _html_private(sender, message, timestamp)
-            # Store in PM log for this sender; show if their chat is open.
             self._store_pm(sender, html)
             if sender != self._current_pm_target:
                 self._status_bar.showMessage(f"📩 New PM from {sender}", 5000)
@@ -581,17 +568,15 @@ class MainWindow(QMainWindow):
         if ptype == "notification":
             room    = packet.get("room", "")
             message = packet.get("message", "")
-            html    = _html_notification(message)
-            self._store_and_show(room, html)
+            self._store_and_show(room, _html_notification(message))
             return
 
         if ptype == "history":
             messages = packet.get("messages", [])
             if not messages:
                 return
-            room = self._current_room or ""
-            sep  = _html_history_separator(room)
-            # Prepend history before live messages already stored.
+            room     = self._current_room or ""
+            sep      = _html_history_separator(room)
             existing = self._room_logs.get(room, [])
             history_htmls = [
                 _html_broadcast(
@@ -602,14 +587,13 @@ class MainWindow(QMainWindow):
                 )
                 for m in messages
             ]
+            # Prepend history before any live messages already buffered.
             self._room_logs[room] = [sep] + history_htmls + existing
-            # Reload the chat display for the current room.
             self._reload_chat()
             return
 
         if ptype == "room_list":
-            rooms = packet.get("rooms", [])
-            self._populate_room_list(rooms)
+            self._populate_room_list(packet.get("rooms", []))
             return
 
         if ptype == "friend_list":
@@ -619,32 +603,23 @@ class MainWindow(QMainWindow):
             return
 
         if ptype == "friend_request":
-            from_user = packet.get("from", "?")
-            self._show_friend_request_notif(from_user)
+            self._show_friend_request_notif(packet.get("from", "?"))
             return
 
-        if ptype == "user_list":
-            # Legacy — ignored now that friends list is used
-            return
+        # ptype == "user_list" is legacy; the friend_list packet supersedes it.
 
     # ------------------------------------------------------------------
-    # Chat area helpers
+    # Chat rendering
     # ------------------------------------------------------------------
 
     def _append_to_chat(self, html: str) -> None:
-        # Store HTML in current room's log then reload display.
         room = self._current_room or ""
         if room not in self._room_logs:
             self._room_logs[room] = []
         self._room_logs[room].append(html)
         self._reload_chat()
 
-    def _scroll_to_bottom(self) -> None:
-        sb = self._chat_area.verticalScrollBar()
-        sb.setValue(sb.maximum())
-
     def _store_and_show(self, room: str, html: str) -> None:
-        # Store HTML in the room log; show it if it's the current room.
         if room not in self._room_logs:
             self._room_logs[room] = []
         self._room_logs[room].append(html)
@@ -652,17 +627,14 @@ class MainWindow(QMainWindow):
         if room == self._current_room:
             self._reload_chat()
         else:
-            # Mark the room with an unread indicator in the list.
             self._mark_room_unread(room)
 
     def _reload_chat(self) -> None:
-        # Re-render stored HTML for current room or PM conversation.
         if self._current_pm_target:
             parts = self._pm_logs.get(self._current_pm_target, [])
         else:
             parts = self._room_logs.get(self._current_room or "", [])
 
-        body = "".join(parts)
         self._chat_area.setHtml(
             f'<html><body style="'
             f'background-color:#0d1117;'
@@ -670,10 +642,14 @@ class MainWindow(QMainWindow):
             f'padding:0;'
             f'font-family:Segoe UI,Arial,sans-serif;'
             f'">'
-            f'{body}'
+            f'{"".join(parts)}'
             f'</body></html>'
         )
         QTimer.singleShot(30, self._scroll_to_bottom)
+
+    def _scroll_to_bottom(self) -> None:
+        sb = self._chat_area.verticalScrollBar()
+        sb.setValue(sb.maximum())
 
     # ------------------------------------------------------------------
     # Room list helpers
@@ -684,7 +660,7 @@ class MainWindow(QMainWindow):
         for r in rooms:
             name = r.get("room_name", "")
             self._room_meta[name] = r
-            is_locked = not r.get("is_member") and name not in self._joined_rooms
+            is_locked   = not r.get("is_member") and name not in self._joined_rooms
             lock_suffix = "  🔒" if is_locked else ""
             item = QListWidgetItem(f"  💬  {name}{lock_suffix}")
             item.setData(Qt.ItemDataRole.UserRole, name)
@@ -692,15 +668,13 @@ class MainWindow(QMainWindow):
         self._highlight_current_room()
 
     def _refresh_room_list_ui(self) -> None:
-        # Update icons without re-fetching from server.
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             name = item.data(Qt.ItemDataRole.UserRole)
             meta = self._room_meta.get(name, {})
-            # Preserve unread badge if already set
-            if "🔵💬" in item.text():
+            if "🔵💬" in item.text():  # keep unread badge if present
                 continue
-            is_locked = not meta.get("is_member") and name not in self._joined_rooms
+            is_locked   = not meta.get("is_member") and name not in self._joined_rooms
             lock_suffix = "  🔒" if is_locked else ""
             item.setText(f"  💬  {name}{lock_suffix}")
         self._highlight_current_room()
@@ -713,7 +687,6 @@ class MainWindow(QMainWindow):
                 return
 
     def _mark_room_unread(self, room: str) -> None:
-        # Add a small blue dot badge next to the chat icon.
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == room:
@@ -722,36 +695,29 @@ class MainWindow(QMainWindow):
                 return
 
     # ------------------------------------------------------------------
-    # User list helpers
+    # Friend list helpers
     # ------------------------------------------------------------------
 
     def _populate_friend_list(self, friends: list[dict]) -> None:
-        # friends = [{"username": str, "online": bool}]
         self._user_list.clear()
         for f in friends:
-            uname  = f["username"]
-            online = f["online"]
+            uname      = f["username"]
+            online     = f["online"]
             has_unread = uname in self._pm_logs and uname != self._current_pm_target
             if has_unread:
-                icon = "🔵"   # blue = unread PM
+                icon = "🔵"
             elif online:
-                icon = "🟢"   # green = online
+                icon = "🟢"
             else:
-                icon = "⚫"   # grey = offline
-            label = f"  {icon}  {uname}"
-            item = QListWidgetItem(label)
+                icon = "⚫"
+            item = QListWidgetItem(f"  {icon}  {uname}")
             item.setData(Qt.ItemDataRole.UserRole, uname)
             item.setData(Qt.ItemDataRole.UserRole + 1, online)
             self._user_list.addItem(item)
         if self._current_pm_target:
             self._highlight_current_user(self._current_pm_target)
 
-    def _populate_user_list(self, users: list[str]) -> None:
-        # Kept for compatibility — not actively used
-        pass
-
     def _highlight_current_user(self, target: str) -> None:
-        # Select the user item matching target in the user list.
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == target:
@@ -759,7 +725,6 @@ class MainWindow(QMainWindow):
                 return
 
     def _mark_user_unread(self, username: str) -> None:
-        # Blue dot on a friend who sent an unread PM.
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == username:
@@ -768,7 +733,6 @@ class MainWindow(QMainWindow):
                 return
 
     def _store_pm(self, contact: str, html: str) -> None:
-        # Store a PM html bubble in pm_logs for `contact`.
         if contact not in self._pm_logs:
             self._pm_logs[contact] = []
         self._pm_logs[contact].append(html)
@@ -776,14 +740,13 @@ class MainWindow(QMainWindow):
             self._reload_chat()
 
     # ------------------------------------------------------------------
-    # Friend request notification
+    # Friend request notification bar
     # ------------------------------------------------------------------
 
     def _show_friend_request_notif(self, from_user: str) -> None:
-        # Show the green notification bar with Accept/Decline for a request.
         self._notif_label.setText(f"👤  Friend request from  {from_user}")
 
-        # Disconnect any previous signals to avoid stacking
+        # Disconnect stale lambdas to avoid one click firing multiple handlers.
         try:
             self._notif_accept_btn.clicked.disconnect()
             self._notif_decline_btn.clicked.disconnect()
@@ -809,7 +772,7 @@ class MainWindow(QMainWindow):
         self._notif_bar.hide()
 
     # ------------------------------------------------------------------
-    # Button / action handlers
+    # Action handlers
     # ------------------------------------------------------------------
 
     def _on_send(self) -> None:
@@ -820,11 +783,9 @@ class MainWindow(QMainWindow):
         if self._current_pm_target:
             self._msg_input.clear()
             self._network.send_private_message(self._current_pm_target, text)
-            # Store own outgoing PM locally (server doesn't echo it back).
-            from datetime import datetime, timezone
+            # Echo own PM locally; the server does not send it back.
             ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            html = _html_pm_out(text, ts)
-            self._store_pm(self._current_pm_target, html)
+            self._store_pm(self._current_pm_target, _html_pm_out(text, ts))
         elif self._current_room:
             self._msg_input.clear()
             self._network.send_broadcast(self._current_room, text)
@@ -838,24 +799,22 @@ class MainWindow(QMainWindow):
         self._current_pm_target = None
         self._user_list.clearSelection()
 
-        meta = self._room_meta.get(room, {})
+        meta      = self._room_meta.get(room, {})
         is_member = meta.get("is_member", False) or room in self._joined_rooms
 
         if not is_member:
-            # Not a member — show invite code dialog.
             dlg = JoinPasswordDialog(room_name=room, parent=self)
             if dlg.exec() != dlg.DialogCode.Accepted:
                 return
-            # Mark as member optimistically; server will reject if wrong.
+            # Optimistically mark as member; server rejects on wrong code.
             self._room_meta.setdefault(room, {})["is_member"] = True
             self._switch_to_room(room, password=dlg.password)
         else:
             self._switch_to_room(room)
 
     def _switch_to_room(self, room: str, password: str = "") -> None:
-        # Join (if needed) and switch the chat display to `room`.
         self._current_pm_target = None
-        self._current_room = room
+        self._current_room      = room
         self._room_name_label.setText(f"#  {room}")
         self._leave_btn.setText("Close Chat")
 
@@ -863,7 +822,8 @@ class MainWindow(QMainWindow):
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == room:
-                item.setText(f"  💬  {room}")   # clear unread badge
+                item.setText(f"  💬  {room}")  # clear unread badge
+                break
 
         self._reload_chat()
 
@@ -875,19 +835,21 @@ class MainWindow(QMainWindow):
         self._msg_input.setFocus()
 
     def _switch_to_pm(self, target: str) -> None:
-        # Switch the center panel to a private conversation with `target`.
         self._current_pm_target = target
-        self._current_room = None
+        self._current_room      = None
         self._room_list.clearSelection()
         self._room_name_label.setText(f"💬  {target}")
-        # Clear unread badge — restore online/offline icon
+
+        # Clear unread badge and restore the correct online/offline icon.
         self._highlight_current_user(target)
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == target:
                 online = item.data(Qt.ItemDataRole.UserRole + 1)
-                icon = "🟢" if online else "⚫"
+                icon   = "🟢" if online else "⚫"
                 item.setText(f"  {icon}  {target}")
+                break
+
         self._leave_btn.setText("Close Chat")
         self._reload_chat()
         self._msg_input.setFocus()
@@ -896,12 +858,10 @@ class MainWindow(QMainWindow):
         dlg = CreateRoomDialog(parent=self)
         if dlg.exec() == dlg.DialogCode.Accepted:
             self._network.send_create_room(dlg.room_name)
-            # Room list refresh & code display handled in on_packet (room_code field).
+            # Room list refresh and code display are handled via on_packet (room_code).
 
     def _on_join_by_code(self) -> None:
-        # Show invite-code dialog; send join_by_code to server.
         dlg = JoinPasswordDialog(room_name="", parent=self)
-        # Patch the title / hint for standalone join flow.
         dlg.setWindowTitle("Join a Room")
         if dlg.exec() == dlg.DialogCode.Accepted:
             code = dlg.password.strip().upper()
@@ -909,9 +869,8 @@ class MainWindow(QMainWindow):
                 self._network.send_join_by_code(code)
 
     def _on_leave_room(self) -> None:
-        # Just close the chat panel for both PM and Room
         self._current_pm_target = None
-        self._current_room = None
+        self._current_room      = None
         self._room_name_label.setText("Select a room →")
         self._leave_btn.setText("Close Chat")
         self._chat_area.clear()
@@ -922,24 +881,21 @@ class MainWindow(QMainWindow):
         item = self._room_list.itemAt(pos)
         if not item:
             return
-        
         room = item.data(Qt.ItemDataRole.UserRole)
         meta = self._room_meta.get(room, {})
-        
         menu = QMenu(self)
-        
-        if "invite_code" in meta and meta["invite_code"]:
+
+        if meta.get("invite_code"):
             copy_action = menu.addAction("Copy Invite Code")
             copy_action.triggered.connect(lambda: self._copy_invite_code(meta["invite_code"]))
-        
-        is_owner = (meta.get("created_by") == self._username)
-        if is_owner:
+
+        if meta.get("created_by") == self._username:
             del_action = menu.addAction("Delete Room")
             del_action.triggered.connect(lambda: self._delete_room_action(room))
         else:
             leave_action = menu.addAction("Leave Room")
             leave_action.triggered.connect(lambda: self._leave_room_action(room))
-            
+
         menu.exec(self._room_list.mapToGlobal(pos))
 
     def _copy_invite_code(self, code: str) -> None:
@@ -951,8 +907,9 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QMessageBox
         ans = QMessageBox.question(
             self, "Delete Room",
-            f"Are you sure you want to permanently delete the room '{room}'?\nAll messages and members will be lost.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            f"Are you sure you want to permanently delete the room '{room}'?\n"
+            f"All messages and members will be lost.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if ans == QMessageBox.StandardButton.Yes:
             self._network.send_delete_room(room)
@@ -969,8 +926,7 @@ class MainWindow(QMainWindow):
             self._room_name_label.setText("Select a room →")
             self._leave_btn.setText("Close Chat")
             self._chat_area.clear()
-        if room in self._room_meta:
-            del self._room_meta[room]
+        self._room_meta.pop(room, None)
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             if item and item.data(Qt.ItemDataRole.UserRole) == room:
@@ -994,7 +950,7 @@ class MainWindow(QMainWindow):
             return
         target = item.data(Qt.ItemDataRole.UserRole)
         online = item.data(Qt.ItemDataRole.UserRole + 1)
-        menu = QMenu(self)
+        menu   = QMenu(self)
         if online:
             pm_action = menu.addAction("✉️  Send PM")
             pm_action.triggered.connect(lambda: self._switch_to_pm(target))
@@ -1012,11 +968,10 @@ class MainWindow(QMainWindow):
         ans = QMessageBox.question(
             self, "Remove Friend",
             f"Remove '{target}' from your friends list?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if ans == QMessageBox.StandardButton.Yes:
             self._network.send_remove_friend(target)
-            # If currently in PM with them, close it
             if self._current_pm_target == target:
                 self._current_pm_target = None
                 self._room_name_label.setText("Select a room →")
@@ -1035,17 +990,15 @@ class MainWindow(QMainWindow):
         self.close()
 
     def _on_disconnected(self) -> None:
-        self._append_to_chat(
-            _html_system("⚠  Disconnected from server.", RED)
-        )
+        self._append_to_chat(_html_system("⚠  Disconnected from server.", RED))
         self._status_bar.showMessage("Disconnected from server.")
 
     # ------------------------------------------------------------------
-    # Window close
+    # Window lifecycle
     # ------------------------------------------------------------------
 
     def closeEvent(self, event) -> None:
-        # Only send logout if not already done via _on_logout()
+        # Only send logout if the user didn't explicitly click the Logout button.
         if self._network.is_connected and not self._logged_out:
             self._network.send_logout()
             self._network.disconnect()

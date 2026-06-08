@@ -1,4 +1,5 @@
-# Qt-aware networking bridge for the PyQt6 GUI client.
+"""Qt-aware networking bridge: runs a background thread that reads packets
+and emits them as Qt signals so the GUI thread can process them safely."""
 
 import socket
 import threading
@@ -34,9 +35,8 @@ from client.protocol import (
 
 logger = logging.getLogger(__name__)
 
-class NetworkClient(QObject):
-    # Thread-safe Qt bridge for the TCP chat protocol.
 
+class NetworkClient(QObject):
     packet_received     = pyqtSignal(dict)
     connected_signal    = pyqtSignal()
     disconnected_signal = pyqtSignal()
@@ -56,12 +56,11 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------
 
     def connect_to_server(self) -> tuple[bool, str]:
-        # Establish a TCP connection and start the receiver daemon thread.
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.settimeout(5.0)
             self._sock.connect((self._host, self._port))
-            self._sock.settimeout(None)   # switch to blocking after connect
+            self._sock.settimeout(None)  # switch to blocking after connect
             self._connected = True
             self._stop_event.clear()
 
@@ -77,18 +76,13 @@ class NetworkClient(QObject):
             return True, ""
 
         except ConnectionRefusedError:
-            msg = (
-                f"Connection refused — is the server running "
-                f"on {self._host}:{self._port}?"
-            )
-            return False, msg
+            return False, f"Connection refused — is the server running on {self._host}:{self._port}?"
         except TimeoutError:
             return False, f"Connection timed out to {self._host}:{self._port}."
         except OSError as exc:
             return False, str(exc)
 
     def disconnect(self) -> None:
-        # Cleanly shut down the connection.
         self._connected = False
         self._stop_event.set()
         if self._sock:
@@ -104,11 +98,10 @@ class NetworkClient(QObject):
         return self._connected
 
     # ------------------------------------------------------------------
-    # Sending — convenience wrappers around protocol builders
+    # Send helpers
     # ------------------------------------------------------------------
 
     def send(self, packet: dict) -> bool:
-        # Send a pre-built packet dict.
         if not self._connected or not self._sock:
             return False
         return send_packet(self._sock, packet)
@@ -169,18 +162,17 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------
 
     def _receiver_loop(self) -> None:
-        # Background daemon thread.
         while not self._stop_event.is_set():
             packet = recv_packet(self._sock)
 
             if packet is None:
-                # Server closed the connection.
+                # Server closed the connection (not a client-side stop).
                 if not self._stop_event.is_set():
                     self._connected = False
                     self.disconnected_signal.emit()
                 break
 
-            if packet:   # skip empty / malformed
+            if packet:  # skip empty / malformed
                 self.packet_received.emit(packet)
 
         logger.debug("GUI-ReceiverThread exited.")
