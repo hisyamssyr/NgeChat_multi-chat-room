@@ -684,13 +684,9 @@ class MainWindow(QMainWindow):
         for r in rooms:
             name = r.get("room_name", "")
             self._room_meta[name] = r
-            if name in self._joined_rooms:
-                icon = "🟢"   # joined this session
-            elif r.get("is_member"):
-                icon = "🟤"   # member, not yet joined this session
-            else:
-                icon = "🔒"   # need invite code
-            item = QListWidgetItem(f"  {icon}  {name}")
+            is_locked = not r.get("is_member") and name not in self._joined_rooms
+            lock_suffix = "  🔒" if is_locked else ""
+            item = QListWidgetItem(f"  💬  {name}{lock_suffix}")
             item.setData(Qt.ItemDataRole.UserRole, name)
             self._room_list.addItem(item)
         self._highlight_current_room()
@@ -701,13 +697,12 @@ class MainWindow(QMainWindow):
             item = self._room_list.item(i)
             name = item.data(Qt.ItemDataRole.UserRole)
             meta = self._room_meta.get(name, {})
-            if name in self._joined_rooms:
-                icon = "🟢"
-            elif meta.get("is_member"):
-                icon = "🟤"
-            else:
-                icon = "🔒"
-            item.setText(f"  {icon}  {name}")
+            # Preserve unread badge if already set
+            if "🔵💬" in item.text():
+                continue
+            is_locked = not meta.get("is_member") and name not in self._joined_rooms
+            lock_suffix = "  🔒" if is_locked else ""
+            item.setText(f"  💬  {name}{lock_suffix}")
         self._highlight_current_room()
 
     def _highlight_current_room(self) -> None:
@@ -718,11 +713,12 @@ class MainWindow(QMainWindow):
                 return
 
     def _mark_room_unread(self, room: str) -> None:
+        # Add a small blue dot badge next to the chat icon.
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == room:
-                if "🔴" not in item.text():
-                    item.setText(f"  🔴  {room}")
+                if "🔵" not in item.text():
+                    item.setText(f"  🔵💬  {room}")
                 return
 
     # ------------------------------------------------------------------
@@ -737,7 +733,7 @@ class MainWindow(QMainWindow):
             online = f["online"]
             has_unread = uname in self._pm_logs and uname != self._current_pm_target
             if has_unread:
-                icon = "🔵"   # blue dot = unread PM
+                icon = "🔵"   # blue = unread PM
             elif online:
                 icon = "🟢"   # green = online
             else:
@@ -745,7 +741,7 @@ class MainWindow(QMainWindow):
             label = f"  {icon}  {uname}"
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, uname)
-            item.setData(Qt.ItemDataRole.UserRole + 1, online)  # store online bool
+            item.setData(Qt.ItemDataRole.UserRole + 1, online)
             self._user_list.addItem(item)
         if self._current_pm_target:
             self._highlight_current_user(self._current_pm_target)
@@ -763,7 +759,7 @@ class MainWindow(QMainWindow):
                 return
 
     def _mark_user_unread(self, username: str) -> None:
-        # Add unread indicator to a friend who sent an unread PM.
+        # Blue dot on a friend who sent an unread PM.
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == username:
@@ -867,7 +863,7 @@ class MainWindow(QMainWindow):
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == room:
-                item.setText(f"  🟢  {room}")
+                item.setText(f"  💬  {room}")   # clear unread badge
 
         self._reload_chat()
 
@@ -884,12 +880,14 @@ class MainWindow(QMainWindow):
         self._current_room = None
         self._room_list.clearSelection()
         self._room_name_label.setText(f"💬  {target}")
-        # Clear unread badge for this contact.
+        # Clear unread badge — restore online/offline icon
         self._highlight_current_user(target)
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == target:
-                item.setText(f"  🟢  {target}")
+                online = item.data(Qt.ItemDataRole.UserRole + 1)
+                icon = "🟢" if online else "⚫"
+                item.setText(f"  {icon}  {target}")
         self._leave_btn.setText("Close Chat")
         self._reload_chat()
         self._msg_input.setFocus()
