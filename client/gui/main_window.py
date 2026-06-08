@@ -316,14 +316,14 @@ class MainWindow(QMainWindow):
 
         rooms_hdr = QLabel("ROOMS")
         rooms_hdr.setObjectName("section_header")
-        left_layout.addWidget(rooms_hdr)
+        lv.addWidget(rooms_hdr)
 
         self._room_list = QListWidget()
         self._room_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._room_list.itemClicked.connect(self._on_room_clicked)
         self._room_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._room_list.customContextMenuRequested.connect(self._on_room_context_menu)
-        left_layout.addWidget(self._room_list, stretch=1)
+        lv.addWidget(self._room_list, stretch=1)
 
         add_btn = QPushButton("＋  Add Room  ▾")
         add_btn.setObjectName("accent_btn")

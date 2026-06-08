@@ -639,3 +639,25 @@ TypeError: execute() argument 1 must be str, not tuple
 2026-06-08 20:04:30  INFO      __main__                        Client 127.0.0.1:62139 disconnected.
 2026-06-08 20:04:30  INFO      server.room_manager             User went offline: tes1 (was in rooms: [])
 2026-06-08 20:04:30  INFO      __main__                        Cleaned up session for 'tes1' (was in: []).
+2026-06-08 20:09:18  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 20:09:18  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 20:09:18  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 20:09:38  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 20:09:38  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 20:09:38  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 20:09:54  INFO      __main__                        New connection from 127.0.0.1:58032
+2026-06-08 20:09:56  INFO      server.database                 New user registered: tes1
+2026-06-08 20:09:56  INFO      __main__                        Registered new user: tes1
+2026-06-08 20:09:56  INFO      server.room_manager             User came online: tes1
+2026-06-08 20:09:56  INFO      __main__                        User logged in: tes1 from 127.0.0.1:58032
+2026-06-08 20:09:56  INFO      __main__                        Client 127.0.0.1:58032 disconnected.
+2026-06-08 20:09:56  INFO      server.room_manager             User went offline: tes1 (was in rooms: [])
+2026-06-08 20:09:56  INFO      __main__                        Cleaned up session for 'tes1' (was in: []).
