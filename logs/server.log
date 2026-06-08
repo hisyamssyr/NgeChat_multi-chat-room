@@ -1,0 +1,319 @@
+2026-06-08 12:12:10  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 12:12:10  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 12:12:10  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 12:13:28  INFO      __main__                        New connection from 127.0.0.1:59855
+2026-06-08 12:13:30  INFO      server.database                 New user registered: hisyamssyr
+2026-06-08 12:13:30  INFO      __main__                        Registered new user: hisyamssyr
+2026-06-08 12:13:30  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:13:30  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:59855
+2026-06-08 12:13:57  INFO      server.database                 Room created: 'testing_room' by hisyamssyr
+2026-06-08 12:14:01  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 12:14:01  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:59855 — no such column: rowid
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 131, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 176, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 295, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 313, in get_room_history
+    rows = self._conn.execute(
+           ~~~~~~~~~~~~~~~~~~^
+        """
+        ^^^
+    ...<10 lines>...
+        (room_name, limit),
+        ^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such column: rowid
+2026-06-08 12:14:01  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testing_room'])
+2026-06-08 12:14:01  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['testing_room']).
+2026-06-08 12:20:20  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 12:20:20  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 12:20:20  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 12:20:52  INFO      __main__                        New connection from 127.0.0.1:59663
+2026-06-08 12:20:56  INFO      __main__                        Client 127.0.0.1:59663 disconnected.
+2026-06-08 12:21:26  INFO      __main__                        New connection from 127.0.0.1:59664
+2026-06-08 12:21:26  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:21:26  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:59664
+2026-06-08 12:21:31  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 12:21:31  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:59664 — no such column: rowid
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 131, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 176, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 295, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 313, in get_room_history
+    rows = self._conn.execute(
+           ~~~~~~~~~~~~~~~~~~^
+        """
+        ^^^
+    ...<10 lines>...
+        (room_name, limit),
+        ^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such column: rowid
+2026-06-08 12:21:31  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testing_room'])
+2026-06-08 12:21:31  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['testing_room']).
+2026-06-08 12:22:13  INFO      __main__                        New connection from 127.0.0.1:59666
+2026-06-08 12:22:15  INFO      server.database                 New user registered: testing2
+2026-06-08 12:22:15  INFO      __main__                        Registered new user: testing2
+2026-06-08 12:22:15  INFO      server.room_manager             User came online: testing2
+2026-06-08 12:22:15  INFO      __main__                        User logged in: testing2 from 127.0.0.1:59666
+2026-06-08 12:22:22  INFO      server.room_manager             'testing2' joined room 'testing_room'
+2026-06-08 12:22:22  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:59666 — no such column: rowid
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 131, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 176, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 295, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 313, in get_room_history
+    rows = self._conn.execute(
+           ~~~~~~~~~~~~~~~~~~^
+        """
+        ^^^
+    ...<10 lines>...
+        (room_name, limit),
+        ^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such column: rowid
+2026-06-08 12:22:22  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['testing_room'])
+2026-06-08 12:22:22  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['testing_room']).
+2026-06-08 12:25:46  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 12:25:46  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 12:25:46  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 12:26:00  INFO      __main__                        New connection from 127.0.0.1:63044
+2026-06-08 12:26:08  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:26:08  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:63044
+2026-06-08 12:26:28  INFO      __main__                        New connection from 127.0.0.1:63045
+2026-06-08 12:26:28  INFO      server.room_manager             User came online: testing2
+2026-06-08 12:26:28  INFO      __main__                        User logged in: testing2 from 127.0.0.1:63045
+2026-06-08 12:26:32  INFO      server.room_manager             'testing2' joined room 'testing_room'
+2026-06-08 12:26:32  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:63045 — no such column: rowid
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 131, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 176, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 295, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 313, in get_room_history
+    rows = self._conn.execute(
+           ~~~~~~~~~~~~~~~~~~^
+        """
+        ^^^
+    ...<10 lines>...
+        (room_name, limit),
+        ^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such column: rowid
+2026-06-08 12:26:32  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['testing_room'])
+2026-06-08 12:26:32  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['testing_room']).
+2026-06-08 12:26:46  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 12:26:46  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:63044 — no such column: rowid
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 131, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 176, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 295, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 313, in get_room_history
+    rows = self._conn.execute(
+           ~~~~~~~~~~~~~~~~~~^
+        """
+        ^^^
+    ...<10 lines>...
+        (room_name, limit),
+        ^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such column: rowid
+2026-06-08 12:26:46  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testing_room'])
+2026-06-08 12:26:46  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['testing_room']).
+2026-06-08 12:30:37  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 12:30:37  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 12:30:37  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 12:31:11  INFO      __main__                        New connection from 127.0.0.1:55445
+2026-06-08 12:31:11  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:31:11  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:55445
+2026-06-08 12:31:14  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 12:31:14  INFO      __main__                        'hisyamssyr' joined room 'testing_room'.
+2026-06-08 12:31:16  INFO      __main__                        Broadcast in 'testing_room' by 'hisyamssyr': test
+2026-06-08 12:31:19  INFO      __main__                        Broadcast in 'testing_room' by 'hisyamssyr': halo
+2026-06-08 12:31:22  INFO      __main__                        Broadcast in 'testing_room' by 'hisyamssyr': hai
+2026-06-08 12:31:31  INFO      __main__                        New connection from 127.0.0.1:55446
+2026-06-08 12:31:31  INFO      server.room_manager             User came online: testing2
+2026-06-08 12:31:31  INFO      __main__                        User logged in: testing2 from 127.0.0.1:55446
+2026-06-08 12:31:33  INFO      server.room_manager             'testing2' joined room 'testing_room'
+2026-06-08 12:31:33  INFO      __main__                        'testing2' joined room 'testing_room'.
+2026-06-08 12:32:01  INFO      server.room_manager             'testing2' left room 'testing_room'
+2026-06-08 12:32:01  INFO      __main__                        'testing2' left room 'testing_room'.
+2026-06-08 12:32:04  INFO      server.room_manager             'testing2' joined room 'testing_room'
+2026-06-08 12:32:04  INFO      __main__                        'testing2' joined room 'testing_room'.
+2026-06-08 12:32:10  INFO      server.database                 Room created: 'halodok' by testing2
+2026-06-08 12:32:36  INFO      __main__                        User logged out: hisyamssyr
+2026-06-08 12:32:36  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testing_room'])
+2026-06-08 12:32:36  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['testing_room']).
+2026-06-08 12:32:38  INFO      __main__                        Client 127.0.0.1:55446 disconnected.
+2026-06-08 12:32:38  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['testing_room'])
+2026-06-08 12:32:38  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['testing_room']).
+2026-06-08 12:37:05  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 12:37:05  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 12:37:05  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 12:37:24  INFO      __main__                        New connection from 127.0.0.1:49757
+2026-06-08 12:37:24  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:37:24  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:49757
+2026-06-08 12:37:48  INFO      __main__                        New connection from 127.0.0.1:57680
+2026-06-08 12:37:48  INFO      server.room_manager             User came online: testing2
+2026-06-08 12:37:48  INFO      __main__                        User logged in: testing2 from 127.0.0.1:57680
+2026-06-08 12:38:04  INFO      __main__                        Private message: 'testing2' → 'hisyamssyr': hai sayang
+2026-06-08 12:38:16  INFO      __main__                        Private message: 'testing2' → 'hisyamssyr': hai sayang
+2026-06-08 12:39:20  INFO      __main__                        Private message: 'hisyamssyr' → 'testing2': hai syang
+2026-06-08 12:39:33  INFO      server.room_manager             'testing2' joined room 'halodok'
+2026-06-08 12:39:33  INFO      __main__                        'testing2' joined room 'halodok'.
+2026-06-08 12:39:34  INFO      server.room_manager             'testing2' joined room 'testing_room'
+2026-06-08 12:39:34  INFO      __main__                        'testing2' joined room 'testing_room'.
+2026-06-08 12:39:41  INFO      server.room_manager             'testing2' left room 'testing_room'
+2026-06-08 12:39:41  INFO      __main__                        'testing2' left room 'testing_room'.
+2026-06-08 12:39:56  INFO      __main__                        User logged out: testing2
+2026-06-08 12:39:56  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['halodok'])
+2026-06-08 12:39:56  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['halodok']).
+2026-06-08 12:39:57  INFO      __main__                        User logged out: hisyamssyr
+2026-06-08 12:39:57  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: [])
+2026-06-08 12:39:57  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: []).
+2026-06-08 12:44:48  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 12:44:48  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 12:44:48  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 12:45:00  INFO      __main__                        New connection from 127.0.0.1:64362
+2026-06-08 12:45:04  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:45:04  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:64362
+2026-06-08 12:45:09  INFO      server.room_manager             'hisyamssyr' joined room 'halodok'
+2026-06-08 12:45:09  INFO      __main__                        'hisyamssyr' joined room 'halodok'.
+2026-06-08 12:45:10  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 12:45:10  INFO      __main__                        'hisyamssyr' joined room 'testing_room'.
+2026-06-08 12:45:20  INFO      __main__                        Broadcast in 'testing_room' by 'hisyamssyr': hola sir
+2026-06-08 12:45:33  INFO      __main__                        New connection from 127.0.0.1:64363
+2026-06-08 12:45:33  INFO      server.room_manager             User came online: testing2
+2026-06-08 12:45:33  INFO      __main__                        User logged in: testing2 from 127.0.0.1:64363
+2026-06-08 12:45:35  INFO      server.room_manager             'testing2' joined room 'testing_room'
+2026-06-08 12:45:35  INFO      __main__                        'testing2' joined room 'testing_room'.
+2026-06-08 12:45:38  INFO      __main__                        Broadcast in 'testing_room' by 'testing2': hai sir
+2026-06-08 12:45:41  INFO      server.room_manager             'testing2' joined room 'halodok'
+2026-06-08 12:45:41  INFO      __main__                        'testing2' joined room 'halodok'.
+2026-06-08 12:45:43  INFO      __main__                        Broadcast in 'halodok' by 'testing2': helaw
+2026-06-08 12:45:54  INFO      __main__                        Broadcast in 'halodok' by 'hisyamssyr': helaw
+2026-06-08 12:46:08  INFO      server.room_manager             'testing2' left room 'halodok'
+2026-06-08 12:46:08  INFO      __main__                        'testing2' left room 'halodok'.
+2026-06-08 12:46:22  INFO      server.room_manager             'testing2' joined room 'halodok'
+2026-06-08 12:46:22  INFO      __main__                        'testing2' joined room 'halodok'.
+2026-06-08 12:46:23  INFO      server.room_manager             'testing2' left room 'halodok'
+2026-06-08 12:46:23  INFO      __main__                        'testing2' left room 'halodok'.
+2026-06-08 12:50:14  INFO      server.room_manager             'hisyamssyr' left room 'halodok'
+2026-06-08 12:50:14  INFO      __main__                        'hisyamssyr' left room 'halodok'.
+2026-06-08 12:50:18  INFO      __main__                        Client 127.0.0.1:64362 disconnected.
+2026-06-08 12:50:18  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['testing_room'])
+2026-06-08 12:50:18  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['testing_room']).
+2026-06-08 12:50:20  INFO      __main__                        Client 127.0.0.1:64363 disconnected.
+2026-06-08 12:50:20  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['testing_room'])
+2026-06-08 12:50:20  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['testing_room']).
+2026-06-08 12:50:31  INFO      __main__                        New connection from 127.0.0.1:56404
+2026-06-08 12:50:31  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 12:50:31  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:56404
+2026-06-08 12:50:50  INFO      __main__                        New connection from 127.0.0.1:56411
+2026-06-08 12:50:50  INFO      server.room_manager             User came online: testing2
+2026-06-08 12:50:50  INFO      __main__                        User logged in: testing2 from 127.0.0.1:56411
+2026-06-08 12:50:57  INFO      __main__                        Private message: 'testing2' → 'hisyamssyr': hy sayang
+2026-06-08 12:51:06  INFO      __main__                        Private message: 'hisyamssyr' → 'testing2': hay
+2026-06-08 12:51:16  INFO      server.room_manager             'hisyamssyr' joined room 'halodok'
+2026-06-08 12:51:16  INFO      __main__                        'hisyamssyr' joined room 'halodok'.
+2026-06-08 12:51:19  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 12:51:19  INFO      __main__                        'hisyamssyr' joined room 'testing_room'.
+2026-06-08 12:51:43  INFO      __main__                        Private message: 'testing2' → 'hisyamssyr': test
+2026-06-08 12:51:50  INFO      __main__                        Private message: 'hisyamssyr' → 'testing2': teszt
+2026-06-08 12:51:52  INFO      __main__                        Client 127.0.0.1:56411 disconnected.
+2026-06-08 12:51:52  INFO      server.room_manager             User went offline: testing2 (was in rooms: [])
+2026-06-08 12:51:52  INFO      __main__                        Cleaned up session for 'testing2' (was in: []).
+2026-06-08 12:52:03  INFO      server.room_manager             'hisyamssyr' left room 'testing_room'
+2026-06-08 12:52:03  INFO      __main__                        'hisyamssyr' left room 'testing_room'.
+2026-06-08 12:52:09  INFO      __main__                        Client 127.0.0.1:56404 disconnected.
+2026-06-08 12:52:10  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['halodok'])
+2026-06-08 12:52:10  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['halodok']).
+2026-06-08 13:59:56  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 13:59:56  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 13:59:56  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 14:00:20  INFO      __main__                        New connection from 127.0.0.1:49973
+2026-06-08 14:00:20  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 14:00:20  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:49973
+2026-06-08 14:01:01  INFO      __main__                        New connection from 127.0.0.1:51558
+2026-06-08 14:01:01  INFO      server.database                 New user registered: testing3
+2026-06-08 14:01:01  INFO      __main__                        Registered new user: testing3
+2026-06-08 14:01:01  INFO      server.room_manager             User came online: testing3
+2026-06-08 14:01:01  INFO      __main__                        User logged in: testing3 from 127.0.0.1:51558
+2026-06-08 14:01:09  INFO      __main__                        Private message: 'testing3' → 'hisyamssyr': test
+2026-06-08 14:01:25  INFO      __main__                        Private message: 'hisyamssyr' → 'testing3': test
+2026-06-08 14:01:47  INFO      server.database                 Room created: 'server test' by testing3
+2026-06-08 14:01:49  INFO      server.room_manager             'testing3' joined room 'server test'
+2026-06-08 14:01:49  INFO      __main__                        'testing3' joined room 'server test'.
+2026-06-08 14:01:51  INFO      __main__                        Broadcast in 'server test' by 'testing3': tes
+2026-06-08 14:01:56  INFO      server.room_manager             'hisyamssyr' joined room 'server test'
+2026-06-08 14:01:56  INFO      __main__                        'hisyamssyr' joined room 'server test'.
+2026-06-08 14:01:59  INFO      __main__                        Broadcast in 'server test' by 'hisyamssyr': tes s
+2026-06-08 14:02:26  INFO      server.room_manager             'hisyamssyr' left room 'server test'
+2026-06-08 14:02:26  INFO      __main__                        'hisyamssyr' left room 'server test'.
+2026-06-08 14:02:28  INFO      server.room_manager             'hisyamssyr' joined room 'testing_room'
+2026-06-08 14:02:28  INFO      __main__                        'hisyamssyr' joined room 'testing_room'.
+2026-06-08 14:02:30  INFO      server.room_manager             'hisyamssyr' left room 'testing_room'
+2026-06-08 14:02:30  INFO      __main__                        'hisyamssyr' left room 'testing_room'.
+2026-06-08 14:03:21  INFO      __main__                        User logged out: hisyamssyr
+2026-06-08 14:03:21  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: [])
+2026-06-08 14:03:21  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: []).
+2026-06-08 14:03:22  INFO      __main__                        Client 127.0.0.1:51558 disconnected.
+2026-06-08 14:03:22  INFO      server.room_manager             User went offline: testing3 (was in rooms: ['server test'])
+2026-06-08 14:03:22  INFO      __main__                        Cleaned up session for 'testing3' (was in: ['server test']).
