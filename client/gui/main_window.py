@@ -17,7 +17,7 @@ from PyQt6.QtGui import QFont, QKeyEvent
 from PyQt6.QtWidgets import QMenu
 
 from client.network_client import NetworkClient
-from client.gui.dialogs import CreateRoomDialog, PrivateMsgDialog, JoinPasswordDialog, RoomCodeDialog
+from client.gui.dialogs import CreateRoomDialog, PrivateMsgDialog, JoinPasswordDialog, RoomCodeDialog, AddFriendDialog
 from client.gui.styles import (
     BLUE, GREEN, RED, PURPLE, AMBER,
     TEXT, TEXT_MUTED, BG_SURFACE, BG_ELEVATED, BORDER,
@@ -230,7 +230,8 @@ class MainWindow(QMainWindow):
         self._joined_rooms: set[str]   = set()
         self._room_logs: dict[str, list[str]] = {}
         self._pm_logs:   dict[str, list[str]] = {}
-        self._room_meta: dict[str, dict]      = {}   # room → {has_password, …}
+        self._room_meta: dict[str, dict]      = {}  # room → metadata
+        self._friend_data: list[dict]          = []  # [{username, online}]
         self._logged_out = False
 
         self.setWindowTitle(f"Multi-Chat Room  —  {username}")
@@ -386,22 +387,24 @@ class MainWindow(QMainWindow):
         rv.setContentsMargins(0, 0, 0, 10)
         rv.setSpacing(0)
 
-        users_hdr = QLabel("ONLINE")
-        users_hdr.setObjectName("section_header")
-        rv.addWidget(users_hdr)
+        friends_hdr = QLabel("FRIENDS")
+        friends_hdr.setObjectName("section_header")
+        rv.addWidget(friends_hdr)
 
         self._user_list = QListWidget()
         self._user_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._user_list.itemClicked.connect(self._on_user_clicked)
-        self._user_list.itemDoubleClicked.connect(self._on_user_clicked)   # same action
+        self._user_list.itemDoubleClicked.connect(self._on_user_clicked)
+        self._user_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._user_list.customContextMenuRequested.connect(self._on_friend_context_menu)
         rv.addWidget(self._user_list, stretch=1)
 
-        pm_btn = QPushButton("✉  Send PM")
-        pm_btn.setObjectName("accent_btn")
-        pm_btn.setFixedHeight(34)
-        pm_btn.setStyleSheet("margin: 6px 10px; border-radius: 6px;")
-        pm_btn.clicked.connect(self._on_pm_clicked)
-        rv.addWidget(pm_btn)
+        add_friend_btn = QPushButton("➕  Add Friend")
+        add_friend_btn.setObjectName("accent_btn")
+        add_friend_btn.setFixedHeight(34)
+        add_friend_btn.setStyleSheet("margin: 6px 10px; border-radius: 6px;")
+        add_friend_btn.clicked.connect(self._on_add_friend)
+        rv.addWidget(add_friend_btn)
 
         splitter.addWidget(left)
         splitter.addWidget(chat_frame)
@@ -459,7 +462,7 @@ class MainWindow(QMainWindow):
 
     def _initial_fetch(self) -> None:
         self._network.send_get_rooms()
-        self._network.send_get_users()
+        self._network.send_get_friends()
 
     # ------------------------------------------------------------------
     # Packet dispatcher (runs in GUI thread)
@@ -569,9 +572,14 @@ class MainWindow(QMainWindow):
             self._populate_room_list(rooms)
             return
 
+        if ptype == "friend_list":
+            friends = packet.get("friends", [])
+            self._friend_data = friends
+            self._populate_friend_list(friends)
+            return
+
         if ptype == "user_list":
-            users = packet.get("users", [])
-            self._populate_user_list(users)
+            # Legacy — ignored now that friends list is used
             return
 
     # ------------------------------------------------------------------
@@ -676,18 +684,30 @@ class MainWindow(QMainWindow):
     # User list helpers
     # ------------------------------------------------------------------
 
-    def _populate_user_list(self, users: list[str]) -> None:
+    def _populate_friend_list(self, friends: list[dict]) -> None:
+        # friends = [{"username": str, "online": bool}]
         self._user_list.clear()
-        for u in users:
-            has_unread = u in self._pm_logs and u != self._current_pm_target
-            icon = "🔵" if has_unread else "🟢"
-            label = f"  {icon}  {u}"
+        for f in friends:
+            uname  = f["username"]
+            online = f["online"]
+            has_unread = uname in self._pm_logs and uname != self._current_pm_target
+            if has_unread:
+                icon = "🔵"   # blue dot = unread PM
+            elif online:
+                icon = "🟢"   # green = online
+            else:
+                icon = "⚫"   # grey = offline
+            label = f"  {icon}  {uname}"
             item = QListWidgetItem(label)
-            item.setData(Qt.ItemDataRole.UserRole, u)
+            item.setData(Qt.ItemDataRole.UserRole, uname)
+            item.setData(Qt.ItemDataRole.UserRole + 1, online)  # store online bool
             self._user_list.addItem(item)
-        # Re-highlight current PM target if user list was refreshed.
         if self._current_pm_target:
             self._highlight_current_user(self._current_pm_target)
+
+    def _populate_user_list(self, users: list[str]) -> None:
+        # Kept for compatibility — not actively used
+        pass
 
     def _highlight_current_user(self, target: str) -> None:
         # Select the user item matching target in the user list.
@@ -698,7 +718,7 @@ class MainWindow(QMainWindow):
                 return
 
     def _mark_user_unread(self, username: str) -> None:
-        # Add a blue dot indicator to a user who sent an unread PM.
+        # Add unread indicator to a friend who sent an unread PM.
         for i in range(self._user_list.count()):
             item = self._user_list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == username:
@@ -882,28 +902,54 @@ class MainWindow(QMainWindow):
                 break
         self._refresh_room_list_ui()
 
-    def _on_pm_clicked(self) -> None:
-        # Send PM button — opens the selected user's conversation or a dialog.
-        selected = self._user_list.currentItem()
-        target   = selected.data(Qt.ItemDataRole.UserRole) if selected else ""
-        if target and target != self._username:
-            self._switch_to_pm(target)
-        else:
-            # No user selected → show dialog to pick one.
-            dlg = PrivateMsgDialog(parent=self)
-            if dlg.exec() == dlg.DialogCode.Accepted:
-                self._switch_to_pm(dlg.target)
-
     def _on_user_clicked(self, item: QListWidgetItem) -> None:
-        # Single/double click on a user — open their PM conversation.
         target = item.data(Qt.ItemDataRole.UserRole)
         if not target or target == self._username:
             return
+        online = item.data(Qt.ItemDataRole.UserRole + 1)
+        if not online:
+            self._status_bar.showMessage(f"⚫  {target} is currently offline.", 3000)
+            return
         self._switch_to_pm(target)
+
+    def _on_friend_context_menu(self, pos) -> None:
+        item = self._user_list.itemAt(pos)
+        if not item:
+            return
+        target = item.data(Qt.ItemDataRole.UserRole)
+        online = item.data(Qt.ItemDataRole.UserRole + 1)
+        menu = QMenu(self)
+        if online:
+            pm_action = menu.addAction("✉️  Send PM")
+            pm_action.triggered.connect(lambda: self._switch_to_pm(target))
+        remove_action = menu.addAction("🔴  Remove Friend")
+        remove_action.triggered.connect(lambda: self._on_remove_friend(target))
+        menu.exec(self._user_list.mapToGlobal(pos))
+
+    def _on_add_friend(self) -> None:
+        dlg = AddFriendDialog(parent=self)
+        if dlg.exec() == dlg.DialogCode.Accepted:
+            self._network.send_add_friend(dlg.username)
+
+    def _on_remove_friend(self, target: str) -> None:
+        from PyQt6.QtWidgets import QMessageBox
+        ans = QMessageBox.question(
+            self, "Remove Friend",
+            f"Remove '{target}' from your friends list?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if ans == QMessageBox.StandardButton.Yes:
+            self._network.send_remove_friend(target)
+            # If currently in PM with them, close it
+            if self._current_pm_target == target:
+                self._current_pm_target = None
+                self._room_name_label.setText("Select a room →")
+                self._leave_btn.setText("Close Chat")
+                self._chat_area.clear()
 
     def _on_refresh(self) -> None:
         self._network.send_get_rooms()
-        self._network.send_get_users()
+        self._network.send_get_friends()
         self._status_bar.showMessage("Refreshed.", 2000)
 
     def _on_logout(self) -> None:

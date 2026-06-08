@@ -661,3 +661,34 @@ TypeError: execute() argument 1 must be str, not tuple
 2026-06-08 20:09:56  INFO      __main__                        Client 127.0.0.1:58032 disconnected.
 2026-06-08 20:09:56  INFO      server.room_manager             User went offline: tes1 (was in rooms: [])
 2026-06-08 20:09:56  INFO      __main__                        Cleaned up session for 'tes1' (was in: []).
+2026-06-08 20:11:34  INFO      __main__                        New connection from 127.0.0.1:55696
+2026-06-08 20:11:34  INFO      server.room_manager             User came online: tes1
+2026-06-08 20:11:34  INFO      __main__                        User logged in: tes1 from 127.0.0.1:55696
+2026-06-08 20:11:49  INFO      server.database                 Room created: 'room_tes1' by tes1 (code=8JNJ154Z)
+2026-06-08 20:11:52  INFO      server.room_manager             'tes1' joined room 'room_tes1'
+2026-06-08 20:11:52  INFO      __main__                        'tes1' joined room 'room_tes1'.
+2026-06-08 20:12:14  INFO      __main__                        New connection from 127.0.0.1:55697
+2026-06-08 20:12:14  INFO      server.database                 New user registered: tes2
+2026-06-08 20:12:14  INFO      __main__                        Registered new user: tes2
+2026-06-08 20:12:14  INFO      server.room_manager             User came online: tes2
+2026-06-08 20:12:14  INFO      __main__                        User logged in: tes2 from 127.0.0.1:55697
+2026-06-08 20:12:23  INFO      server.database                 Room created: 'room_tes2' by tes2 (code=DYV2JI5L)
+2026-06-08 20:12:25  INFO      server.room_manager             'tes2' joined room 'room_tes2'
+2026-06-08 20:12:25  INFO      __main__                        'tes2' joined room 'room_tes2'.
+2026-06-08 20:12:28  INFO      __main__                        'tes2' joined room 'room_tes1' via invite code.
+2026-06-08 20:12:28  INFO      server.room_manager             'tes2' joined room 'room_tes1'
+2026-06-08 20:12:32  INFO      __main__                        Broadcast in 'room_tes1' by 'tes2': has aku masuk
+2026-06-08 20:12:41  INFO      __main__                        Broadcast in 'room_tes1' by 'tes2': DYV2JI5L
+2026-06-08 20:12:51  INFO      __main__                        'tes1' joined room 'room_tes2' via invite code.
+2026-06-08 20:12:51  INFO      server.room_manager             'tes1' joined room 'room_tes2'
+2026-06-08 20:12:54  INFO      __main__                        Broadcast in 'room_tes2' by 'tes1': has
+2026-06-08 20:13:20  INFO      server.room_manager             'tes1' left room 'room_tes2'
+2026-06-08 20:13:20  INFO      __main__                        'tes1' left room 'room_tes2' permanently.
+2026-06-08 20:13:45  INFO      server.database                 Room deleted permanently: 'room_tes1' by tes1
+2026-06-08 20:13:45  INFO      server.room_manager             Room 'room_tes1' was deleted and removed from active tracking.
+2026-06-08 20:14:05  INFO      __main__                        Client 127.0.0.1:55697 disconnected.
+2026-06-08 20:14:05  INFO      server.room_manager             User went offline: tes2 (was in rooms: ['room_tes2'])
+2026-06-08 20:14:05  INFO      __main__                        Cleaned up session for 'tes2' (was in: ['room_tes2']).
+2026-06-08 20:14:06  INFO      __main__                        Client 127.0.0.1:55696 disconnected.
+2026-06-08 20:14:06  INFO      server.room_manager             User went offline: tes1 (was in rooms: [])
+2026-06-08 20:14:06  INFO      __main__                        Cleaned up session for 'tes1' (was in: []).

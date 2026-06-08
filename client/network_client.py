@@ -25,6 +25,9 @@ from client.protocol import (
     build_private_message,
     build_get_rooms,
     build_get_users,
+    build_get_friends,
+    build_add_friend,
+    build_remove_friend,
 )
 
 logger = logging.getLogger(__name__)
@@ -143,6 +146,15 @@ class NetworkClient(QObject):
 
     def send_get_users(self) -> bool:
         return self.send(build_get_users())
+
+    def send_get_friends(self) -> bool:
+        return self.send(build_get_friends())
+
+    def send_add_friend(self, target: str) -> bool:
+        return self.send(build_add_friend(target))
+
+    def send_remove_friend(self, target: str) -> bool:
+        return self.send(build_remove_friend(target))
 
     # ------------------------------------------------------------------
     # Receiver thread

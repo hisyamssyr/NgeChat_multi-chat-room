@@ -109,3 +109,12 @@ def build_get_rooms() -> dict:
 def build_get_users() -> dict:
     """Create a get_users request packet."""
     return {"type": "get_users"}
+
+def build_get_friends() -> dict:
+    return {"type": "get_friends"}
+
+def build_add_friend(target: str) -> dict:
+    return {"type": "add_friend", "target": target}
+
+def build_remove_friend(target: str) -> dict:
+    return {"type": "remove_friend", "target": target}

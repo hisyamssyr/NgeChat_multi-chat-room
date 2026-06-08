@@ -23,6 +23,7 @@ from server.protocol    import (
     make_history_packet,
     make_room_list_packet,
     make_user_list_packet,
+    make_friend_list_packet,
 )
 
 HOST        = os.environ.get("CHAT_HOST", "0.0.0.0")
@@ -116,6 +117,9 @@ class ClientHandler:
             "get_rooms":       self._handle_get_rooms,
             "get_users":       self._handle_get_users,
             "delete_room":     self._handle_delete_room,
+            "add_friend":      self._handle_add_friend,
+            "remove_friend":   self._handle_remove_friend,
+            "get_friends":     self._handle_get_friends,
         }
         handler = dispatch.get(ptype)
         if handler:
@@ -186,6 +190,9 @@ class ClientHandler:
         self._rooms.add_user(username, self._sock)
         self._send_ok(msg)
         logger.info("User logged in: %s from %s:%d", username, *self._addr)
+
+        # Push live status update to online friends of this user.
+        self._push_friend_status_to_friends(username)
 
     # ------------------------------------------------------------------
     # Handler: logout
@@ -423,8 +430,13 @@ class ClientHandler:
             self._send_err("You cannot send a private message to yourself.")
             return
 
+        # PM is restricted to friends.
+        if not self._db.is_friend(self._username, target):
+            self._send_err(f"'{target}' is not in your friends list. Add them as a friend first.")
+            return
+
         if not self._rooms.is_online(target):
-            self._send_err(f"User '{target}' is not online.")
+            self._send_err(f"'{target}' is currently offline.")
             return
 
         from datetime import datetime, timezone
@@ -466,6 +478,58 @@ class ClientHandler:
         send_packet(self._sock, make_user_list_packet(users))
 
     # ------------------------------------------------------------------
+    # Handler: get_friends / add_friend / remove_friend
+    # ------------------------------------------------------------------
+
+    def _handle_get_friends(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        self._send_friend_list_to(self._username)
+
+    def _handle_add_friend(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        target = packet["target"].strip()
+        ok, msg = self._db.add_friend(self._username, target)
+        if ok:
+            self._send_ok(msg)
+            # Refresh the requester's friend list.
+            self._send_friend_list_to(self._username)
+        else:
+            self._send_err(msg)
+
+    def _handle_remove_friend(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        target = packet["target"].strip()
+        ok, msg = self._db.remove_friend(self._username, target)
+        if ok:
+            self._send_ok(msg)
+            self._send_friend_list_to(self._username)
+        else:
+            self._send_err(msg)
+
+    def _send_friend_list_to(self, username: str) -> None:
+        # Build and push the friend_list packet to `username` if they are online.
+        friends_raw = self._db.get_friends(username)
+        friends = [
+            {"username": f, "online": self._rooms.is_online(f)}
+            for f in friends_raw
+        ]
+        sock = self._rooms.get_socket(username)
+        if sock:
+            send_packet(sock, make_friend_list_packet(friends))
+
+    def _push_friend_status_to_friends(self, username: str) -> None:
+        # When `username` comes online or goes offline, push updated lists
+        # to all of their friends who are currently online.
+        # Find everyone who has `username` as a friend.
+        friends_of_user = self._db.get_friends(username)
+        for friend in friends_of_user:
+            if self._rooms.is_online(friend):
+                self._send_friend_list_to(friend)
+
+    # ------------------------------------------------------------------
     # Cleanup — called when the thread is exiting
     # ------------------------------------------------------------------
 
@@ -476,6 +540,9 @@ class ClientHandler:
             user_rooms = self._rooms.get_user_rooms(self._username)
 
             self._rooms.remove_user(self._username)
+
+            # Push offline status to all online friends.
+            self._push_friend_status_to_friends(self._username)
 
             # Notify each room the user was in.
             for room_name in user_rooms:

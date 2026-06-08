@@ -117,12 +117,25 @@ class Database:
                     message   TEXT    NOT NULL,
                     timestamp TEXT    NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS friends (
+                    username TEXT NOT NULL,
+                    friend   TEXT NOT NULL,
+                    added_at TEXT NOT NULL,
+                    PRIMARY KEY (username, friend)
+                );
             """)
             self._conn.commit()
 
             # ── Auto-migrations (safe to run every startup) ────────────────
             migrations = [
                 "ALTER TABLE rooms ADD COLUMN invite_code TEXT NOT NULL DEFAULT ''",
+                """CREATE TABLE IF NOT EXISTS friends (
+                    username TEXT NOT NULL,
+                    friend   TEXT NOT NULL,
+                    added_at TEXT NOT NULL,
+                    PRIMARY KEY (username, friend)
+                )""",
                 # Drop old password_hash col: SQLite doesn’t support DROP COLUMN
                 # before 3.35, so we just ignore it if it exists.
             ]
@@ -459,3 +472,62 @@ class Database:
                 }
                 for r in rows
             ]
+
+    # ------------------------------------------------------------------
+    # Friend operations
+    # ------------------------------------------------------------------
+
+    def add_friend(self, username: str, friend: str) -> tuple[bool, str]:
+        # Add `friend` to `username`'s friend list.
+        if username == friend:
+            return False, "You cannot add yourself as a friend."
+        if not self.user_exists(friend):
+            return False, f"User '{friend}' does not exist."
+        now = self._now_utc()
+        with self._lock:
+            try:
+                self._conn.execute(
+                    "INSERT INTO friends (username, friend, added_at) VALUES (?, ?, ?)",
+                    (username, friend, now),
+                )
+                self._conn.commit()
+                return True, f"'{friend}' added to your friends."
+            except sqlite3.IntegrityError:
+                return False, f"'{friend}' is already in your friends list."
+            except sqlite3.Error as exc:
+                logger.error("add_friend DB error: %s", exc)
+                return False, "Database error."
+
+    def remove_friend(self, username: str, friend: str) -> tuple[bool, str]:
+        # Remove `friend` from `username`'s friend list.
+        with self._lock:
+            try:
+                cur = self._conn.execute(
+                    "DELETE FROM friends WHERE username = ? AND friend = ?",
+                    (username, friend),
+                )
+                self._conn.commit()
+                if cur.rowcount == 0:
+                    return False, f"'{friend}' is not in your friends list."
+                return True, f"'{friend}' removed from your friends."
+            except sqlite3.Error as exc:
+                logger.error("remove_friend DB error: %s", exc)
+                return False, "Database error."
+
+    def get_friends(self, username: str) -> list[str]:
+        # Return sorted list of friend usernames for `username`.
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT friend FROM friends WHERE username = ? ORDER BY friend ASC",
+                (username,),
+            ).fetchall()
+            return [r["friend"] for r in rows]
+
+    def is_friend(self, username: str, friend: str) -> bool:
+        # Return True if `friend` is in `username`'s friend list.
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT 1 FROM friends WHERE username = ? AND friend = ?",
+                (username, friend),
+            ).fetchone()
+            return row is not None

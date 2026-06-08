@@ -331,3 +331,59 @@ class RoomCodeDialog(_BaseDialog):
         from PyQt6.QtWidgets import QApplication
         QApplication.clipboard().setText(self._code)
 
+# AddFriendDialog
+
+class AddFriendDialog(_BaseDialog):
+    """Dialog to search and add a friend by username."""
+
+    def __init__(self, parent=None) -> None:
+        super().__init__("Add Friend", parent)
+        self.username: str = ""
+        self._build_body()
+        self._build_buttons(ok_text="Add Friend  ➕")
+        self.setMinimumSize(380, 240)
+        if parent:
+            pg = parent.geometry()
+            self.move(
+                pg.x() + (pg.width()  - self.minimumWidth())  // 2,
+                pg.y() + (pg.height() - self.minimumHeight()) // 2,
+            )
+
+    def _build_body(self) -> None:
+        title = QLabel("👤  Add a Friend")
+        title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self._layout.addWidget(title)
+
+        hint = QLabel(
+            "Enter the exact username of the person you want to add.\n"
+            "They will appear in your Friends list whether online or offline."
+        )
+        hint.setObjectName("status_label")
+        hint.setWordWrap(True)
+        self._layout.addWidget(hint)
+
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setStyleSheet("color: #30363d;")
+        self._layout.addWidget(line)
+
+        self._layout.addWidget(self._field_label("Username"))
+        self._input = QLineEdit()
+        self._input.setPlaceholderText("e.g.  alice, bob123")
+        self._input.setMaxLength(32)
+        self._input.returnPressed.connect(self._on_ok)
+        self._layout.addWidget(self._input)
+
+        self._error = QLabel("")
+        self._error.setObjectName("error_label")
+        self._error.hide()
+        self._layout.addWidget(self._error)
+
+    def _on_ok(self) -> None:
+        name = self._input.text().strip()
+        if not name:
+            self._error.setText("Username cannot be empty.")
+            self._error.show()
+            return
+        self.username = name
+        self.accept()

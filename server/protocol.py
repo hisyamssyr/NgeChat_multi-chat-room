@@ -27,6 +27,9 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "get_rooms":      [],
     "get_users":      [],
     "delete_room":    ["room"],
+    "add_friend":     ["target"],
+    "remove_friend":  ["target"],
+    "get_friends":    [],
 }
 
 def send_packet(sock, data: dict) -> bool:
@@ -137,10 +140,18 @@ def make_room_list_packet(rooms: list[dict]) -> dict:
     }
 
 def make_user_list_packet(users: list[str]) -> dict:
-    """Outbound: list of currently online usernames."""
+    # Outbound: list of currently online usernames.
     return {
         "type":  "user_list",
         "users": users,
+    }
+
+def make_friend_list_packet(friends: list[dict]) -> dict:
+    # Outbound: list of friends with online status.
+    # Each entry: {"username": str, "online": bool}
+    return {
+        "type":    "friend_list",
+        "friends": friends,
     }
 
 class PacketError(Exception):
