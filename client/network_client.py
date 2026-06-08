@@ -128,6 +128,9 @@ class NetworkClient(QObject):
     def send_leave_room(self, room: str) -> bool:
         return self.send(build_leave_room(room))
 
+    def send_delete_room(self, room: str) -> bool:
+        return self.send(build_delete_room(room))
+
     def send_broadcast(self, room: str, message: str) -> bool:
         return self.send(build_broadcast(room, message))
 

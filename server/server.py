@@ -115,6 +115,7 @@ class ClientHandler:
             "private_message": self._handle_private_message,
             "get_rooms":       self._handle_get_rooms,
             "get_users":       self._handle_get_users,
+            "delete_room":     self._handle_delete_room,
         }
         handler = dispatch.get(ptype)
         if handler:
@@ -326,6 +327,8 @@ class ClientHandler:
             return
 
         self._rooms.leave_room(self._username, room_name)
+        # Remove from db permanently
+        self._db.remove_room_member(room_name, self._username)
         self._send_ok(f"Left room '{room_name}'.")
 
         # Notify remaining members.
@@ -334,7 +337,34 @@ class ClientHandler:
             f"📤 {self._username} left the room.",
         )
         self._rooms.broadcast_to_room(room_name, notif)
-        logger.info("'%s' left room '%s'.", self._username, room_name)
+        logger.info("'%s' left room '%s' permanently.", self._username, room_name)
+
+    # ------------------------------------------------------------------
+    # Handler: delete_room
+    # ------------------------------------------------------------------
+
+    def _handle_delete_room(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+
+        room_name = packet["room"].strip()
+
+        ok, msg = self._db.delete_room(room_name, self._username)
+        if not ok:
+            self._send_err(msg)
+            return
+
+        # Notify all active members before removing from in-memory
+        notif = make_notification_push(
+            room_name,
+            f"❌ The room '{room_name}' has been permanently deleted by the owner.",
+        )
+        self._rooms.broadcast_to_room(room_name, notif)
+        
+        # Remove entirely from memory tracking
+        self._rooms.delete_room(room_name)
+        
+        self._send_ok(msg)
 
     # ------------------------------------------------------------------
     # Handler: broadcast

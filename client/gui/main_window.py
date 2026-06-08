@@ -761,7 +761,13 @@ class MainWindow(QMainWindow):
         self._current_pm_target = None
         self._current_room = room
         self._room_name_label.setText(f"#  {room}")
-        self._leave_btn.setText("Leave Room")
+        
+        meta = self._room_meta.get(room, {})
+        is_owner = (meta.get("created_by") == self._username)
+        if is_owner:
+            self._leave_btn.setText("Delete Room")
+        else:
+            self._leave_btn.setText("Leave Room")
 
         self._highlight_current_room()
         for i in range(self._room_list.count()):
@@ -822,13 +828,43 @@ class MainWindow(QMainWindow):
         if not self._current_room:
             return
         room = self._current_room
-        self._network.send_leave_room(room)
-        self._joined_rooms.discard(room)
-        self._current_room = None
-        self._room_name_label.setText("Select a room →")
-        self._leave_btn.setText("Leave Room")
-        self._chat_area.clear()
-        self._refresh_room_list_ui()
+        if self._leave_btn.text() == "Delete Room":
+            from PyQt6.QtWidgets import QMessageBox
+            ans = QMessageBox.question(
+                self, "Delete Room",
+                f"Are you sure you want to permanently delete the room '{room}'?\nAll messages and members will be lost.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if ans == QMessageBox.StandardButton.Yes:
+                self._network.send_delete_room(room)
+                self._joined_rooms.discard(room)
+                self._current_room = None
+                self._room_name_label.setText("Select a room →")
+                self._leave_btn.setText("Leave Room")
+                self._chat_area.clear()
+                if room in self._room_meta:
+                    del self._room_meta[room]
+                for i in range(self._room_list.count()):
+                    item = self._room_list.item(i)
+                    if item and item.data(Qt.ItemDataRole.UserRole) == room:
+                        self._room_list.takeItem(i)
+                        break
+                self._refresh_room_list_ui()
+        else:
+            self._network.send_leave_room(room)
+            self._joined_rooms.discard(room)
+            self._current_room = None
+            self._room_name_label.setText("Select a room →")
+            self._leave_btn.setText("Leave Room")
+            self._chat_area.clear()
+            if room in self._room_meta:
+                del self._room_meta[room]
+            for i in range(self._room_list.count()):
+                item = self._room_list.item(i)
+                if item and item.data(Qt.ItemDataRole.UserRole) == room:
+                    self._room_list.takeItem(i)
+                    break
+            self._refresh_room_list_ui()
 
     def _on_pm_clicked(self) -> None:
         # Send PM button — opens the selected user's conversation or a dialog.

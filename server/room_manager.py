@@ -96,6 +96,16 @@ class RoomManager:
             logger.info("'%s' left room '%s'", username, room_name)
             return True
 
+    def delete_room(self, room_name: str) -> list[str]:
+        # Remove room entirely from memory and return its members.
+        with self._lock:
+            if room_name in self._room_members:
+                members = list(self._room_members[room_name])
+                del self._room_members[room_name]
+                logger.info("Room '%s' was deleted and removed from active tracking.", room_name)
+                return members
+            return []
+
     def is_in_room(self, username: str, room_name: str) -> bool:
         # Return True if `username` is currently a member of `room_name`.
         with self._lock:

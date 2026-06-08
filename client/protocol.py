@@ -90,6 +90,10 @@ def build_leave_room(room: str) -> dict:
     """Create a leave_room request packet."""
     return {"type": "leave_room", "room": room}
 
+def build_delete_room(room: str) -> dict:
+    """Create a delete_room request packet (owner only)."""
+    return {"type": "delete_room", "room": room}
+
 def build_broadcast(room: str, message: str) -> dict:
     """Create a broadcast request packet."""
     return {"type": "broadcast", "room": room, "message": message}

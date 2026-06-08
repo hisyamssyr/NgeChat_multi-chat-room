@@ -26,6 +26,7 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "private_message":["target", "message"],
     "get_rooms":      [],
     "get_users":      [],
+    "delete_room":    ["room"],
 }
 
 def send_packet(sock, data: dict) -> bool:
