@@ -20,6 +20,7 @@ from client.protocol import (
     build_join_room,
     build_join_by_code,
     build_leave_room,
+    build_delete_room,
     build_broadcast,
     build_private_message,
     build_get_rooms,

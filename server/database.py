@@ -431,21 +431,23 @@ class Database:
                 return False
 
     def get_room_history(self, room_name: str, limit: int = HISTORY_LIMIT) -> list[dict]:
-            # Fetch the most recent `limit` messages for a room, ordered oldest-first
-    # so the client can display them chronologically.
-    # Each entry is a dict:
-    # { "sender": str, "message": str, "timestamp": str }
+        # Fetch the most recent `limit` messages for a room, ordered oldest-first
+        # so the client can display them chronologically.
+        # Each entry is a dict:
+        # { "sender": str, "message": str, "timestamp": str }
         with self._lock:
             rows = self._conn.execute(
-                    # SELECT sender, message, timestamp
-    # FROM (
-    # SELECT id, sender, message, timestamp
-    # FROM   messages
-    # WHERE  room_name = ?
-    # ORDER  BY id DESC
-    # LIMIT  ?
-    # )
-    # ORDER BY id ASC,
+                """
+                SELECT sender, message, timestamp
+                FROM (
+                    SELECT id, sender, message, timestamp
+                    FROM   messages
+                    WHERE  room_name = ?
+                    ORDER  BY id DESC
+                    LIMIT  ?
+                )
+                ORDER BY id ASC
+                """,
                 (room_name, limit),
             ).fetchall()
             return [

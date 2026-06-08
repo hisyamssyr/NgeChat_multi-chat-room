@@ -537,3 +537,65 @@ sqlite3.OperationalError: no such column: rowid
 2026-06-08 19:24:01  INFO      __main__                        Client 127.0.0.1:51163 disconnected.
 2026-06-08 19:24:01  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['teshewre'])
 2026-06-08 19:24:01  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['teshewre']).
+2026-06-08 19:56:02  INFO      root                            Logger initialised — level=INFO, log file=D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\logs\server.log
+2026-06-08 19:56:02  INFO      server.database                 Database initialised at D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\database\chat.db
+2026-06-08 19:56:02  INFO      __main__                        ╔══════════════════════════════════════════╗
+  Multi-Chat Room Server started
+  Listening on 0.0.0.0:9090
+  Press Ctrl+C to stop.
+╚══════════════════════════════════════════╝
+2026-06-08 19:56:21  INFO      __main__                        New connection from 127.0.0.1:57609
+2026-06-08 19:56:21  INFO      server.room_manager             User came online: hisyamssyr
+2026-06-08 19:56:21  INFO      __main__                        User logged in: hisyamssyr from 127.0.0.1:57609
+2026-06-08 19:56:32  INFO      server.database                 Room created: 'room_hisyam' by hisyamssyr (code=YGWD5LGQ)
+2026-06-08 19:56:35  INFO      server.room_manager             'hisyamssyr' joined room 'room_hisyam'
+2026-06-08 19:56:35  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:57609 — execute() argument 1 must be str, not tuple
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 78, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 122, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 255, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 439, in get_room_history
+            rows = self._conn.execute(
+                   ~~~~~~~~~~~~~~~~~~^
+                    # SELECT sender, message, timestamp
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+                (room_name, limit),
+                ^^^^^^^^^^^^^^^^^^^
+            ).fetchall()
+            ^
+TypeError: execute() argument 1 must be str, not tuple
+2026-06-08 19:56:35  INFO      server.room_manager             User went offline: hisyamssyr (was in rooms: ['room_hisyam'])
+2026-06-08 19:56:35  INFO      __main__                        Cleaned up session for 'hisyamssyr' (was in: ['room_hisyam']).
+2026-06-08 19:57:16  INFO      __main__                        New connection from 127.0.0.1:58270
+2026-06-08 19:57:16  INFO      server.room_manager             User came online: testing2
+2026-06-08 19:57:16  INFO      __main__                        User logged in: testing2 from 127.0.0.1:58270
+2026-06-08 19:57:21  INFO      server.room_manager             'testing2' joined room 'test2'
+2026-06-08 19:57:21  ERROR     __main__                        Unhandled exception in ClientHandler for 127.0.0.1:58270 — execute() argument 1 must be str, not tuple
+Traceback (most recent call last):
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 78, in run
+    self._handle_packet(packet)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 122, in _handle_packet
+    handler(packet)
+    ~~~~~~~^^^^^^^^
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\server.py", line 255, in _handle_join_room
+    history = self._db.get_room_history(room_name)
+  File "D:\KULIAH\SEMESTER 4\Network Programming\Final Project\g04-final-project-d-ngechatt\server\database.py", line 439, in get_room_history
+            rows = self._conn.execute(
+                   ~~~~~~~~~~~~~~~~~~^
+                    # SELECT sender, message, timestamp
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+                (room_name, limit),
+                ^^^^^^^^^^^^^^^^^^^
+            ).fetchall()
+            ^
+TypeError: execute() argument 1 must be str, not tuple
+2026-06-08 19:57:21  INFO      server.room_manager             User went offline: testing2 (was in rooms: ['test2'])
+2026-06-08 19:57:21  INFO      __main__                        Cleaned up session for 'testing2' (was in: ['test2']).
