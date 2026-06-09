@@ -23,12 +23,15 @@ class LoginWindow(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Multi-Chat Room — Sign In")
         self.setModal(True)
-        self.setFixedSize(440, 560)
+        self.setMinimumSize(440, 560)
+        self.resize(440, 560)
         self.setWindowFlags(
-            Qt.WindowType.Dialog |
+            Qt.WindowType.Window |
             Qt.WindowType.CustomizeWindowHint |
             Qt.WindowType.WindowTitleHint |
-            Qt.WindowType.WindowCloseButtonHint
+            Qt.WindowType.WindowCloseButtonHint |
+            Qt.WindowType.WindowMaximizeButtonHint |
+            Qt.WindowType.WindowMinimizeButtonHint
         )
 
         # Public outputs (set on accept)
@@ -60,6 +63,7 @@ class LoginWindow(QDialog):
 
         card = QFrame()
         card.setObjectName("login_card")
+        card.setFixedWidth(380)
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(32, 32, 32, 32)
         card_layout.setSpacing(16)
