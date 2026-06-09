@@ -264,8 +264,6 @@ class MainWindow(QMainWindow):
         root.setSpacing(0)
 
         root.addWidget(self._build_title_bar())
-        self._notif_bar = self._build_notif_bar()
-        root.addWidget(self._notif_bar)
         root.addWidget(self._build_body(), stretch=1)
         root.addWidget(self._build_input_bar())
 
@@ -305,40 +303,7 @@ class MainWindow(QMainWindow):
 
         return bar
 
-    def _build_notif_bar(self) -> QFrame:
-        """Green inline bar shown when a friend request arrives (hidden by default)."""
-        bar = QFrame()
-        bar.setObjectName("notif_bar")
-        bar.setFixedHeight(44)
-        bar.setStyleSheet("#notif_bar { background:#1f3a2d; border-bottom:1px solid #2ea043; }")
-        bar.hide()
-
-        h = QHBoxLayout(bar)
-        h.setContentsMargins(16, 0, 16, 0)
-        h.setSpacing(10)
-
-        self._notif_label = QLabel()
-        self._notif_label.setStyleSheet("color:#3fb950; font-size:13px;")
-        h.addWidget(self._notif_label, stretch=1)
-
-        self._notif_accept_btn = QPushButton("Accept")
-        self._notif_accept_btn.setObjectName("send_btn")
-        self._notif_accept_btn.setFixedSize(80, 28)
-
-        self._notif_decline_btn = QPushButton("Decline")
-        self._notif_decline_btn.setObjectName("danger_btn")
-        self._notif_decline_btn.setFixedSize(80, 28)
-
-        self._notif_dismiss_btn = QPushButton("✕")
-        self._notif_dismiss_btn.setObjectName("icon_btn")
-        self._notif_dismiss_btn.setFixedSize(28, 28)
-        self._notif_dismiss_btn.clicked.connect(self._dismiss_notif)
-
-        h.addWidget(self._notif_accept_btn)
-        h.addWidget(self._notif_decline_btn)
-        h.addWidget(self._notif_dismiss_btn)
-
-        return bar
+    # Notif bar removed
 
     def _build_body(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -435,6 +400,12 @@ class MainWindow(QMainWindow):
         self._user_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._user_list.customContextMenuRequested.connect(self._on_friend_context_menu)
         rv.addWidget(self._user_list, stretch=1)
+
+        self._pending_req_btn = QPushButton("📩 Friend Requests")
+        self._pending_req_btn.setFixedHeight(34)
+        self._pending_req_btn.setStyleSheet("margin: 6px 10px; border-radius: 6px;")
+        self._pending_req_btn.clicked.connect(self._on_view_friend_requests)
+        rv.addWidget(self._pending_req_btn)
 
         add_friend_btn = QPushButton("➕  Add Friend")
         add_friend_btn.setObjectName("accent_btn")
@@ -606,6 +577,11 @@ class MainWindow(QMainWindow):
             self._show_friend_request_notif(packet.get("from", "?"))
             return
 
+        if ptype == "pending_requests_list":
+            requests = packet.get("requests", [])
+            self._show_friend_requests_dialog(requests)
+            return
+
         # ptype == "user_list" is legacy; the friend_list packet supersedes it.
 
     # ------------------------------------------------------------------
@@ -744,32 +720,24 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _show_friend_request_notif(self, from_user: str) -> None:
-        self._notif_label.setText(f"👤  Friend request from  {from_user}")
+        self._pending_req_btn.setText("📩 Friend Requests (New)")
+        self._pending_req_btn.setStyleSheet("margin: 6px 10px; border-radius: 6px; background-color: #2ea043; color: white;")
 
-        # Disconnect stale lambdas to avoid one click firing multiple handlers.
-        try:
-            self._notif_accept_btn.clicked.disconnect()
-            self._notif_decline_btn.clicked.disconnect()
-        except RuntimeError:
-            pass
+    def _on_view_friend_requests(self) -> None:
+        self._pending_req_btn.setText("📩 Friend Requests")
+        self._pending_req_btn.setStyleSheet("margin: 6px 10px; border-radius: 6px;")
+        self._network.send_get_pending_requests()
 
-        self._notif_accept_btn.clicked.connect(
-            lambda: self._respond_friend_request(from_user, accept=True)
-        )
-        self._notif_decline_btn.clicked.connect(
-            lambda: self._respond_friend_request(from_user, accept=False)
-        )
-        self._notif_bar.show()
+    def _show_friend_requests_dialog(self, requests: list[str]) -> None:
+        from client.gui.dialogs import FriendRequestsDialog
+        dlg = FriendRequestsDialog(requests, self._on_accept_friend, self._on_decline_friend, parent=self)
+        dlg.exec()
 
-    def _respond_friend_request(self, from_user: str, accept: bool) -> None:
-        if accept:
-            self._network.send_accept_friend(from_user)
-        else:
-            self._network.send_decline_friend(from_user)
-        self._notif_bar.hide()
+    def _on_accept_friend(self, from_user: str) -> None:
+        self._network.send_accept_friend(from_user)
 
-    def _dismiss_notif(self) -> None:
-        self._notif_bar.hide()
+    def _on_decline_friend(self, from_user: str) -> None:
+        self._network.send_decline_friend(from_user)
 
     # ------------------------------------------------------------------
     # Action handlers
@@ -954,7 +922,7 @@ class MainWindow(QMainWindow):
         if online:
             pm_action = menu.addAction("✉️  Send PM")
             pm_action.triggered.connect(lambda: self._switch_to_pm(target))
-        remove_action = menu.addAction("🔴  Remove Friend")
+        remove_action = menu.addAction("🔴  Unfriend")
         remove_action.triggered.connect(lambda: self._on_remove_friend(target))
         menu.exec(self._user_list.mapToGlobal(pos))
 

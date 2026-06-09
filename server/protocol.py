@@ -32,6 +32,7 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "get_friends":     [],
     "accept_friend":   ["target"],
     "decline_friend":  ["target"],
+    "get_pending_requests": [],
 }
 
 
@@ -135,6 +136,10 @@ def make_friend_list_packet(friends: list[dict]) -> dict:
 
 def make_friend_request_push(from_user: str) -> dict:
     return {"type": "friend_request", "from": from_user}
+
+
+def make_pending_requests_list(requests: list[str]) -> dict:
+    return {"type": "pending_requests_list", "requests": requests}
 
 
 class PacketError(Exception):

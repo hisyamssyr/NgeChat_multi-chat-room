@@ -110,6 +110,9 @@ def build_add_friend(target: str) -> dict:
 def build_remove_friend(target: str) -> dict:
     return {"type": "remove_friend", "target": target}
 
+def build_get_pending_requests() -> dict:
+    return {"type": "get_pending_requests"}
+
 def build_accept_friend(target: str) -> dict:
     return {"type": "accept_friend", "target": target}
 

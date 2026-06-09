@@ -510,6 +510,15 @@ class Database:
             ).fetchall()
             return [r["friend"] for r in rows]
 
+    def get_pending_received(self, username: str) -> list[str]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT username FROM friends WHERE friend = ? AND status = 'pending'"
+                " ORDER BY username ASC",
+                (username,),
+            ).fetchall()
+            return [r["username"] for r in rows]
+
     def is_friend(self, username: str, friend: str) -> bool:
         with self._lock:
             row = self._conn.execute(

@@ -157,6 +157,10 @@ class NetworkClient(QObject):
     def send_decline_friend(self, target: str) -> bool:
         return self.send(build_decline_friend(target))
 
+    def send_get_pending_requests(self) -> bool:
+        from client.protocol import build_get_pending_requests
+        return self.send(build_get_pending_requests())
+
     # ------------------------------------------------------------------
     # Receiver thread
     # ------------------------------------------------------------------

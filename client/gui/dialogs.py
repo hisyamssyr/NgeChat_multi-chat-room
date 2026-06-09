@@ -387,3 +387,70 @@ class AddFriendDialog(_BaseDialog):
             return
         self.username = name
         self.accept()
+
+# FriendRequestsDialog
+
+class FriendRequestsDialog(QDialog):
+    """Dialog displaying pending incoming friend requests."""
+
+    def __init__(self, requests: list[str], on_accept_cb, on_decline_cb, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Friend Requests")
+        self.setModal(True)
+        self.setMinimumWidth(380)
+
+        self._requests = requests
+        self._on_accept_cb = on_accept_cb
+        self._on_decline_cb = on_decline_cb
+
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(24, 20, 24, 20)
+        self._layout.setSpacing(14)
+
+        title = QLabel("👥  Friend Requests")
+        title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        self._layout.addWidget(title)
+
+        if not self._requests:
+            lbl = QLabel("You have no pending friend requests.")
+            lbl.setObjectName("status_label")
+            self._layout.addWidget(lbl)
+        else:
+            for req in self._requests:
+                row = QHBoxLayout()
+                row.setSpacing(10)
+
+                lbl = QLabel(f"👤 {req}")
+                lbl.setStyleSheet("font-size:14px; font-weight:bold;")
+                row.addWidget(lbl, stretch=1)
+
+                accept_btn = QPushButton("Accept")
+                accept_btn.setObjectName("send_btn")
+                accept_btn.setFixedSize(70, 28)
+                accept_btn.clicked.connect(lambda checked=False, r=req: self._handle_accept(r))
+
+                decline_btn = QPushButton("Decline")
+                decline_btn.setObjectName("danger_btn")
+                decline_btn.setFixedSize(70, 28)
+                decline_btn.clicked.connect(lambda checked=False, r=req: self._handle_decline(r))
+
+                row.addWidget(accept_btn)
+                row.addWidget(decline_btn)
+                self._layout.addLayout(row)
+
+        self._layout.addStretch()
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        btn_row.addWidget(close_btn)
+        self._layout.addLayout(btn_row)
+
+    def _handle_accept(self, req: str) -> None:
+        self._on_accept_cb(req)
+        self.accept()
+
+    def _handle_decline(self, req: str) -> None:
+        self._on_decline_cb(req)
+        self.accept()

@@ -110,6 +110,7 @@ class ClientHandler:
             "get_friends":     self._handle_get_friends,
             "accept_friend":   self._handle_accept_friend,
             "decline_friend":  self._handle_decline_friend,
+            "get_pending_requests": self._handle_get_pending_requests,
         }
         handler = dispatch.get(ptype)
         if handler:
@@ -369,6 +370,13 @@ class ClientHandler:
         if not self._require_login():
             return
         self._send_friend_list_to(self._username)
+
+    def _handle_get_pending_requests(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        requests = self._db.get_pending_received(self._username)
+        from .protocol import make_pending_requests_list
+        send_packet(self._sock, make_pending_requests_list(requests))
 
     def _handle_add_friend(self, packet: dict) -> None:
         if not self._require_login():
