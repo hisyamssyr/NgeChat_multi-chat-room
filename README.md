@@ -26,7 +26,6 @@ A real-time, multi-room chat application featuring:
 - **TCP Socket Server**: Multi-threaded architecture, dedicating one thread per client.
 - **Security**: TLS encryption implemented via the `ssl` module to secure all data transmissions.
 - **GUI Client**: A modern desktop application built with PyQt6, featuring a three-panel layout and a dark theme.
-- **CLI Client**: A fully functional terminal-based alternative client.
 - **Data Persistence**: SQLite database for persisting user credentials, room information, and chat history.
 - **Custom Protocol**: JSON-based message framing with a 4-byte length prefix over raw TCP.
 
@@ -54,7 +53,7 @@ A real-time, multi-room chat application featuring:
 | **Logging** | `logging` + `logging.handlers` |
 | **GUI Framework** | PyQt6 |
 
-*Note: The server and CLI client are built entirely using the Python standard library. The GUI client requires `PyQt6`.*
+*Note: The server is built entirely using the Python standard library. The GUI client requires `PyQt6`.*
 
 ### System Architecture
 
@@ -77,10 +76,7 @@ A real-time, multi-room chat application featuring:
 |  +-----------------+  |                    |  |  RoomManager  (RLock)        |  |
 +-----------------------+                    |  |  Database     (Lock + WAL)   |  |
                                              |  +------------------------------+  |
-+-----------------------+                    +------------------------------------+
-|      CLI Client       |   TCP / TLS / JSON
-|     (client.py)       | <----------------> (Same server and protocol)
-+-----------------------+
+                                             +------------------------------------+
 ```
 
 ---
@@ -99,7 +95,6 @@ project/
 |   +-- logger.py           # Console and rotating file logger configuration
 |
 +-- client/
-|   +-- client.py           # CLI client (main loop + receiver thread)
 |   +-- protocol.py         # Wire framing and packet builders
 |   +-- network_client.py   # Qt-aware networking bridge (SSL + QObject)
 |   +-- gui_main.py         # GUI entry point
@@ -207,7 +202,7 @@ Use the `--debug` flag for verbose packet-level logging.
 
 ### 2. Launching the Client
 
-**GUI Client (Recommended):**
+**GUI Client:**
 ```bash
 python -m client.gui_main
 ```
@@ -216,33 +211,6 @@ To pre-fill host and port details:
 python -m client.gui_main --host 127.0.0.1 --port 9090
 ```
 
-**CLI Client:**
-```bash
-python -m client.client
-```
-
----
-
-## Command Reference
-
-When using the CLI client, the following commands are available:
-
-| Command | Action |
-|---|---|
-| `/register <user> <pass>` | Create a new user account |
-| `/login <user> <pass>` | Authenticate with the server |
-| `/logout` | Terminate the current session |
-| `/create <room>` | Initialize a new chat room |
-| `/join <room>` | Enter a chat room and set it as active |
-| `/leave [room]` | Exit the specified or currently active room |
-| `/room <room>` | Switch focus to a different joined room |
-| `/rooms` | Display a list of available rooms |
-| `/users` | Display a list of online users |
-| `/pm <user> <message>` | Send a private direct message |
-| `<any text>` | Send a broadcast message to the active room |
-| `/help` | Display command documentation |
-| `/quit` or `/exit` | Disconnect and close the application |
-
 ---
 
 ## Testing Scenario
@@ -250,7 +218,7 @@ When using the CLI client, the following commands are available:
 To verify system functionality, establish three concurrent client sessions.
 
 1. **Start Server**: Run `python -m server.server`.
-2. **Launch Clients**: Open three terminal instances running `python -m client.client` or `python -m client.gui_main`.
+2. **Launch Clients**: Open three terminal instances running `python -m client.gui_main`.
 3. **Authentication**: Register and login as `alice`, `bob`, and `charlie`.
 4. **Room Management**: Have `alice` create rooms `AI` and `General`.
 5. **Session Verification**:
