@@ -11,3 +11,6 @@ database/*.db-wal
 
 # File Log
 logs/*.log
+
+# SSL Certs
+certs/

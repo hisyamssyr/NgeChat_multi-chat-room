@@ -1,5 +1,6 @@
 import socket
 import threading
+import ssl
 import logging
 import sys
 import os
@@ -490,6 +491,14 @@ class ChatServer:
         self._rooms       = RoomManager()
         self._server_sock: socket.socket | None = None
         self._running     = False
+        
+        # Load TLS certificates
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        cert_path = os.path.join(base_dir, "certs", "cert.pem")
+        key_path  = os.path.join(base_dir, "certs", "key.pem")
+        
+        self._ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        self._ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
 
     def start(self) -> None:
         self._db.initialise()
@@ -530,8 +539,15 @@ class ChatServer:
             except OSError:
                 break  # server socket closed by stop()
 
+            try:
+                secure_sock = self._ssl_context.wrap_socket(client_sock, server_side=True)
+            except ssl.SSLError as e:
+                logger.error("SSL handshake failed for %s:%d — %s", *client_addr, e)
+                client_sock.close()
+                continue
+
             handler = ClientHandler(
-                client_sock=client_sock,
+                client_sock=secure_sock,
                 client_addr=client_addr,
                 db=self._db,
                 rooms=self._rooms,

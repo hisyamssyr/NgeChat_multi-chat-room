@@ -3,6 +3,7 @@ and emits them as Qt signals so the GUI thread can process them safely."""
 
 import socket
 import threading
+import ssl
 import logging
 import sys
 import os
@@ -57,9 +58,17 @@ class NetworkClient(QObject):
 
     def connect_to_server(self) -> tuple[bool, str]:
         try:
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.settimeout(5.0)
+            raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            raw_sock.settimeout(5.0)
+            
+            # Setup TLS context (accepting self-signed certs)
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            
+            self._sock = context.wrap_socket(raw_sock, server_hostname=self._host)
             self._sock.connect((self._host, self._port))
+            
             self._sock.settimeout(None)  # switch to blocking after connect
             self._connected = True
             self._stop_event.clear()
