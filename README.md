@@ -1,143 +1,121 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/4SHtB1vz)
+# Multi-Chat Room Application
 
-# 💬 Multi-Chat Room Application
+**Final Project — Computer Network Programming**
 
-> **Final Project — Computer Network Programming**
-> TCP-based multi-room chat application using Python standard libraries only.
+A TCP-based multi-room chat application utilizing Python standard libraries for core networking, enhanced with TLS encryption for secure communication.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
+- [Architecture & Tech Stack](#architecture--tech-stack)
 - [Project Structure](#project-structure)
 - [Database Schema](#database-schema)
-- [Protocol](#protocol)
+- [Protocol Specification](#protocol-specification)
 - [Getting Started](#getting-started)
 - [Command Reference](#command-reference)
-- [Testing with 3 Clients](#testing-with-3-clients)
+- [Testing Scenario](#testing-scenario)
 
 ---
 
 ## Overview
 
-A real-time multi-room chat application built with:
+A real-time, multi-room chat application featuring:
 
-- **TCP Socket Server** — multi-threaded, one thread per client
-- **GUI Client** — modern PyQt6 desktop app with dark theme (3-panel layout)
-- **CLI Client** — terminal-based fallback client, fully preserved
-- **SQLite** — persists users, rooms, and message history
-- **JSON Protocol** — length-prefixed framing over raw TCP
+- **TCP Socket Server**: Multi-threaded architecture, dedicating one thread per client.
+- **Security**: TLS encryption implemented via the `ssl` module to secure all data transmissions.
+- **GUI Client**: A modern desktop application built with PyQt6, featuring a three-panel layout and a dark theme.
+- **CLI Client**: A fully functional terminal-based alternative client.
+- **Data Persistence**: SQLite database for persisting user credentials, room information, and chat history.
+- **Custom Protocol**: JSON-based message framing with a 4-byte length prefix over raw TCP.
 
-Supported features: user registration & login, room create/join/leave, broadcast messaging, private messages (DM), online user list, room history on join, and a modern desktop GUI.
+### Key Features
+- User registration and authentication
+- Room creation, joining, and leaving
+- Real-time broadcast messaging within rooms
+- Private messaging (Direct Messages) between online users
+- Online user presence tracking
+- Automatic room history retrieval upon joining
 
 ---
 
-## Tech Stack
+## Architecture & Tech Stack
 
-| Layer | Technology |
+| Component | Technology |
 |---|---|
-| Language | Python 3.13 |
-| Transport | `socket` (TCP) |
-| Concurrency | `threading` |
-| Database | `sqlite3` |
-| Serialisation | `json` |
-| Auth | `hashlib` (SHA-256) |
-| Logging | `logging` + `logging.handlers` |
-| GUI | **PyQt6** |
+| **Language** | Python 3.13 |
+| **Transport** | `socket` (TCP) |
+| **Security** | `ssl` (TLS 1.2/1.3) |
+| **Concurrency** | `threading` |
+| **Database** | `sqlite3` (with WAL mode) |
+| **Serialization** | `json` |
+| **Authentication** | `hashlib` (SHA-256) |
+| **Logging** | `logging` + `logging.handlers` |
+| **GUI Framework** | PyQt6 |
 
-> ✅ Server and CLI client use **100% Python standard library** — no extra dependencies.
-> ✅ GUI client requires `PyQt6` — install with `pip install -r requirements.txt`.
+*Note: The server and CLI client are built entirely using the Python standard library. The GUI client requires `PyQt6`.*
 
----
+### System Architecture
 
-## Architecture
-
+```text
++-----------------------+                    +------------------------------------+
+|      GUI Client       |   TCP / TLS / JSON |           TCP Server               |
+|     (gui_main.py)     | <----------------> |  +------------------------------+  |
+|  +-----------------+  |                    |  |  Main Thread (accept loop)   |  |
+|  | MainWindow      |  |                    |  +-------------+----------------+  |
+|  | (Qt GUI)        |  |                    |                | spawn per client  |
+|  +-------+---------+  |                    |  +-------------v----------------+  |
+|          | signals    |                    |  |  ClientHandler Thread (xN)   |  |
+|  +-------v---------+  |                    |  |  - recv / parse packet       |  |
+|  | NetworkClient   |  |                    |  |  - dispatch to handler       |  |
+|  | (QObject)       |  |                    |  |  - send response / push      |  |
+|  +-------+---------+  |                    |  +-------------+----------------+  |
+|          | daemon     |                    |                |                   |
+|  +-------v---------+  |                    |  +-------------v----------------+  |
+|  | ReceiverThread  |  |                    |  |  Shared State (thread-safe)  |  |
+|  +-----------------+  |                    |  |  RoomManager  (RLock)        |  |
++-----------------------+                    |  |  Database     (Lock + WAL)   |  |
+                                             |  +------------------------------+  |
++-----------------------+                    +------------------------------------+
+|      CLI Client       |   TCP / TLS / JSON
+|     (client.py)       | <----------------> (Same server and protocol)
++-----------------------+
 ```
-┌─────────────────────┐                  ┌────────────────────────────────────┐
-│   GUI Client        │   TCP / JSON     │         TCP Server                 │
-│  (gui_main.py)      │ ◄──────────────  │  ┌──────────────────────────────┐  │
-│  ┌───────────────┐  │                  │  │  Main Thread (accept loop)   │  │
-│  │ MainWindow    │  │ ──────────────►  │  └──────────┬───────────────────┘  │
-│  │ (Qt GUI)      │  │                  │             │ spawn per client       │
-│  └──────┬────────┘  │                  │  ┌──────────▼───────────────────┐  │
-│         │ signals   │                  │  │  ClientHandler Thread (×N)   │  │
-│  ┌──────▼────────┐  │                  │  │  • recv / parse packet       │  │
-│  │ NetworkClient │  │                  │  │  • dispatch to handler       │  │
-│  │ (QObject)     │  │                  │  │  • send response / push      │  │
-│  └──────┬────────┘  │                  │  └──────────┬───────────────────┘  │
-│         │ daemon    │                  │             │                        │
-│  ┌──────▼────────┐  │                  │  ┌──────────▼───────────────────┐  │
-│  │ ReceiverThread│  │                  │  │  Shared State (thread-safe)  │  │
-│  └───────────────┘  │                  │  │  RoomManager  (RLock)        │  │
-└─────────────────────┘                  │  │  Database     (Lock + WAL)   │  │
-                                         │  └──────────────────────────────┘  │
-┌─────────────────────┐                  └────────────────────────────────────┘
-│   CLI Client        │   TCP / JSON
-│  (client.py)        │ ◄──────────────  (same server, same protocol)
-└─────────────────────┘
-```
-
-### GUI Signal Flow
-
-The GUI uses Qt's signal/slot mechanism for thread-safe UI updates:
-
-```
-ReceiverThread (daemon)          Qt GUI Thread (main)
-────────────────────────         ─────────────────────────────────────
-recv_packet()                    NetworkClient.packet_received(dict)
-  → emit packet_received  ──►      → MainWindow.on_packet()
-                                        ├─ broadcast   → append to chat area
-                                        ├─ private_msg → show PM (purple)
-                                        ├─ notification→ system message
-                                        ├─ history     → prepend on room join
-                                        ├─ room_list   → populate left panel
-                                        └─ user_list   → populate right panel
-```
-
-### Threading Model
-
-| Thread | Count | Responsibility |
-|---|---|---|
-| Main / Accept | 1 | `server.accept()` loop; spawns a `ClientHandler` per connection |
-| ClientHandler | 1 per client | Owns client socket; runs recv loop; dispatches packets |
-| CLI Receiver | 1 (CLI client) | Daemon thread; prints server pushes while main thread reads input |
-| GUI Receiver | 1 (GUI client) | Daemon thread; emits `packet_received` Qt signal to GUI thread |
 
 ---
 
 ## Project Structure
 
-```
+```text
 project/
-│
-├── server/
-│   ├── server.py           # TCP accept loop + ClientHandler dispatch
-│   ├── database.py         # SQLite CRUD (users, rooms, messages)
-│   ├── room_manager.py     # In-memory online users & room membership
-│   ├── protocol.py         # Framing, packet builders, validation
-│   └── logger.py           # Colourised console + rotating file logger
-│
-├── client/
-│   ├── client.py           # CLI client — loop + receiver daemon thread
-│   ├── protocol.py         # Wire framing + packet builder functions
-│   ├── network_client.py   # Qt-aware networking bridge (QObject + signals)
-│   ├── gui_main.py         # ★ GUI entry point  →  python -m client.gui_main
-│   └── gui/
-│       ├── styles.py       # Dark theme QSS stylesheet + colour constants
-│       ├── dialogs.py      # CreateRoomDialog, PrivateMsgDialog
-│       ├── login_window.py # Login / Register form (QDialog)
-│       └── main_window.py  # 3-panel main window (QMainWindow)
-│
-├── database/
-│   └── chat.db             # SQLite database (auto-created on first run)
-│
-├── logs/
-│   └── server.log          # Rotating server log (auto-created)
-│
-└── requirements.txt        # PyQt6 (only external dependency)
+|
++-- certs/                  # SSL Certificates (cert.pem, key.pem)
++-- server/
+|   +-- server.py           # TCP accept loop, SSL wrapping, Client dispatch
+|   +-- database.py         # SQLite CRUD operations
+|   +-- room_manager.py     # In-memory online user and room state
+|   +-- protocol.py         # Wire framing, packet builders, validation
+|   +-- logger.py           # Console and rotating file logger configuration
+|
++-- client/
+|   +-- client.py           # CLI client (main loop + receiver thread)
+|   +-- protocol.py         # Wire framing and packet builders
+|   +-- network_client.py   # Qt-aware networking bridge (SSL + QObject)
+|   +-- gui_main.py         # GUI entry point
+|   +-- gui/
+|       +-- styles.py       # QSS stylesheets
+|       +-- dialogs.py      # Dialog windows
+|       +-- login_window.py # Authentication form
+|       +-- main_window.py  # Main application window
+|
++-- database/
+|   +-- chat.db             # SQLite database (auto-generated)
+|
++-- logs/
+|   +-- server.log          # Rotating server logs (auto-generated)
+|
++-- requirements.txt        # External dependencies
 ```
 
 ---
@@ -154,7 +132,8 @@ CREATE TABLE users (
 CREATE TABLE rooms (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     room_name  TEXT UNIQUE NOT NULL,
-    created_by TEXT NOT NULL
+    created_by TEXT NOT NULL,
+    invite_code TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE messages (
@@ -168,51 +147,39 @@ CREATE TABLE messages (
 
 ---
 
-## Protocol
+## Protocol Specification
 
-All packets use **4-byte length-prefix + UTF-8 JSON**:
+The application uses a custom binary-framed JSON protocol. Every packet transmitted over the TCP connection is prefixed with a 4-byte unsigned integer (big-endian) representing the length of the following JSON payload.
 
+```text
++-----------------------+----------------------------------+
+|  4 bytes (uint32)     |  N bytes (UTF-8 JSON payload)    |
+|  big-endian length    |  { "type": "...", ... }          |
++-----------------------+----------------------------------+
 ```
-┌─────────────────────┬──────────────────────────────────┐
-│  4 bytes (uint32)   │  N bytes (UTF-8 JSON payload)    │
-│  big-endian length  │  { "type": "...", ... }           │
-└─────────────────────┴──────────────────────────────────┘
-```
 
-### Client → Server Packets
-
-| Type | Required Fields |
+### Client Actions
+| Type | Required Payload Fields |
 |---|---|
 | `register` | `username`, `password` |
 | `login` | `username`, `password` |
-| `logout` | — |
+| `logout` | None |
 | `create_room` | `room` |
 | `join_room` | `room` |
+| `join_by_code` | `code` |
 | `leave_room` | `room` |
+| `delete_room` | `room` |
 | `broadcast` | `room`, `message` |
-| `private_message` | `target`, `message` |
-| `get_rooms` | — |
-| `get_users` | — |
+| `private_message`| `target`, `message` |
+| `get_rooms` | None |
+| `get_users` | None |
 
-### Server → Client Responses
-
-```jsonc
-// Request response
-{ "status": "ok",    "message": "Login successful." }
-{ "status": "error", "message": "Incorrect password." }
-
-// Push: room broadcast
-{ "type": "broadcast", "room": "AI", "sender": "alice", "message": "Hello", "timestamp": "..." }
-
-// Push: private message
-{ "type": "private_message", "sender": "bob", "message": "Hey", "timestamp": "..." }
-
-// Push: join / leave notification
-{ "type": "notification", "room": "AI", "message": "charlie joined the room" }
-
-// Room history on join
-{ "type": "history", "messages": [ { "sender": "...", "message": "...", "timestamp": "..." } ] }
-```
+### Server Responses & Pushes
+- **Action Response**: `{ "status": "ok"|"error", "message": "..." }`
+- **Room Broadcast**: `{ "type": "broadcast", "room": "...", "sender": "...", "message": "...", "timestamp": "..." }`
+- **Private Message**: `{ "type": "private_message", "sender": "...", "message": "...", "timestamp": "..." }`
+- **System Notification**: `{ "type": "notification", "room": "...", "message": "..." }`
+- **Room History**: `{ "type": "history", "messages": [...] }`
 
 ---
 
@@ -220,266 +187,81 @@ All packets use **4-byte length-prefix + UTF-8 JSON**:
 
 ### Prerequisites
 
-- Python **3.13+**
-- PyQt6 (for the GUI client only):
-  ```bash
-  pip install -r requirements.txt
-  ```
-- Three terminal windows (or tabs)
+1. Python 3.13 or higher.
+2. Install required dependencies (for GUI):
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Generate SSL certificates. Ensure OpenSSL is installed and run the following in the project root:
+   ```bash
+   mkdir certs
+   openssl req -x509 -newkey rsa:4096 -nodes -out certs/cert.pem -keyout certs/key.pem -days 365 -subj "/CN=localhost"
+   ```
 
-### 1 — Start the Server
-
-Open **Terminal 1** and run:
+### 1. Starting the Server
 
 ```bash
-cd path/to/g04-final-project-d-ngechatt
 python -m server.server
 ```
+Use the `--debug` flag for verbose packet-level logging.
 
-Expected output:
+### 2. Launching the Client
 
-```
-2026-06-08 04:15:00  INFO      server.logger   Logger initialised — level=INFO
-2026-06-08 04:15:00  INFO      server.server   Multi-Chat Room Server started
-                                               Listening on 0.0.0.0:9090
-                                               Press Ctrl+C to stop.
-```
-
-> **Optional:** pass `--debug` for verbose packet-level logging:
-> ```bash
-> python -m server.server --debug
-> ```
-
-### 2a — Launch the GUI Client ⭐ (Recommended)
-
-Open a new terminal and run:
-
+**GUI Client (Recommended):**
 ```bash
 python -m client.gui_main
 ```
-
-Connect to a remote server:
-
+To pre-fill host and port details:
 ```bash
-python -m client.gui_main --host 192.168.1.5 --port 9090
+python -m client.gui_main --host 127.0.0.1 --port 9090
 ```
 
-The **Login window** opens. Fill in your credentials and server address, then click **Login** or **Register New Account**.
-
-After authentication the **main window** appears:
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  🗨 Multi-Chat Room                 [alice]  [↺ Refresh] [Logout]│
-├──────────────┬───────────────────────────────┬───────────────────┤
-│ ROOMS        │ # AI                          │ ONLINE            │
-│ ──────────── │ ─────────────────────────── │ ────────────────── │
-│ 🟢 AI        │ [14:01] bob: Hello!           │ 🟢 alice          │
-│ 💬 Gaming    │ [14:02] alice: Hey there!     │ 🟢 bob            │
-│ 💬 Network   │ ── charlie joined the room ── │ 🟢 charlie        │
-│              │                               │                   │
-│ [＋ New Room]│                               │ [✉ Send PM]       │
-├──────────────┴───────────────────────────────┴───────────────────┤
-│ [📎] [🎤]   Type a message…  (Enter to send)      [  Send  ▶  ] │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 2b — Launch the CLI Client (Alternative)
-
+**CLI Client:**
 ```bash
 python -m client.client
 ```
-
-Connect to a remote server:
-
-```bash
-python -m client.client --host 192.168.1.5 --port 9090
-```
-
-> 💡 Both clients connect to the **same server** using the **same JSON/TCP protocol**. You can mix GUI and CLI clients in the same session.
-
-### 3 — Stop the Server
-
-Press `Ctrl+C` in Terminal 1. The server performs a graceful shutdown (closes the database connection cleanly).
 
 ---
 
 ## Command Reference
 
-Once connected, type these commands in the client terminal:
+When using the CLI client, the following commands are available:
 
-| Command | Description |
+| Command | Action |
 |---|---|
-| `/register <user> <pass>` | Create a new account |
-| `/login <user> <pass>` | Log in |
-| `/logout` | Log out (keeps client open) |
-| `/create <room>` | Create a new chat room |
-| `/join <room>` | Join a room *(sets active room)* |
-| `/leave [room]` | Leave a room *(defaults to active room)* |
-| `/room <room>` | Switch active room without re-joining |
-| `/rooms` | List all available rooms |
-| `/users` | List currently online users |
-| `/pm <user> <message>` | Send a private message to a user |
-| `<any text>` | Broadcast to the currently active room |
-| `/help` | Show command reference |
-| `/quit` or `/exit` | Disconnect and close the client |
-
-> 💡 **Tip:** After `/join <room>`, just type and press Enter to chat — no `/broadcast` prefix needed.
+| `/register <user> <pass>` | Create a new user account |
+| `/login <user> <pass>` | Authenticate with the server |
+| `/logout` | Terminate the current session |
+| `/create <room>` | Initialize a new chat room |
+| `/join <room>` | Enter a chat room and set it as active |
+| `/leave [room]` | Exit the specified or currently active room |
+| `/room <room>` | Switch focus to a different joined room |
+| `/rooms` | Display a list of available rooms |
+| `/users` | Display a list of online users |
+| `/pm <user> <message>` | Send a private direct message |
+| `<any text>` | Send a broadcast message to the active room |
+| `/help` | Display command documentation |
+| `/quit` or `/exit` | Disconnect and close the application |
 
 ---
 
-## Testing with 3 Clients
+## Testing Scenario
 
-Follow this step-by-step scenario to verify all features work correctly.
+To verify system functionality, establish three concurrent client sessions.
 
-> 💡 You can use **GUI clients**, **CLI clients**, or **a mix of both** — the protocol is identical.
-
-### Setup
-
-Start the server in Terminal 1, then open Terminals 2, 3, and 4.
-
-- **GUI:** `python -m client.gui_main`
-- **CLI:** `python -m client.client`
-
----
-
-### Step 1 — Register & Login
-
-**Terminal 2 (Alice):**
-```
-/register alice pass123
-/login alice pass123
-```
-
-**Terminal 3 (Bob):**
-```
-/register bob pass456
-/login bob pass456
-```
-
-**Terminal 4 (Charlie):**
-```
-/register charlie pass789
-/login charlie pass789
-```
-
-✅ Each terminal should receive: `✓ Login successful.`
+1. **Start Server**: Run `python -m server.server`.
+2. **Launch Clients**: Open three terminal instances running `python -m client.client` or `python -m client.gui_main`.
+3. **Authentication**: Register and login as `alice`, `bob`, and `charlie`.
+4. **Room Management**: Have `alice` create rooms `AI` and `General`.
+5. **Session Verification**:
+   - Have `alice` and `bob` join `AI`.
+   - Have `charlie` join `General`.
+   - Verify that broadcasts in `AI` are only visible to `alice` and `bob`.
+   - Verify that private messages (`/pm charlie Hello`) are securely routed only to `charlie`.
+6. **History Verification**: Have `charlie` join `AI` and confirm retrieval of prior room broadcasts.
 
 ---
 
-### Step 2 — Create & Join Rooms
+### Logs
 
-**Alice** creates two rooms:
-```
-/create AI
-/create General
-```
-
-**Alice** joins `AI`:
-```
-/join AI
-```
-
-**Bob** joins `AI`:
-```
-/join AI
-```
-> ✅ Alice's terminal should show: `── [AI] 📥 bob joined the room. ──`
-
-**Charlie** joins `General`:
-```
-/join General
-```
-
----
-
-### Step 3 — Broadcast Messaging
-
-**Alice** (active room: `AI`) types:
-```
-Hello everyone in AI!
-```
-> ✅ Both Alice's and Bob's terminals show the message.
-> ✅ Charlie does NOT see it (he's in a different room).
-
-**Bob** replies:
-```
-Hey Alice, what's up?
-```
-> ✅ Both Alice and Bob see Bob's message.
-
----
-
-### Step 4 — Private Message
-
-**Alice** sends a private message to Charlie:
-```
-/pm charlie Hey Charlie, you're in General right?
-```
-> ✅ Charlie's terminal shows: `📩 [PM] alice: Hey Charlie, you're in General right?`
-> ✅ Bob does NOT see this message.
-
----
-
-### Step 5 — List Rooms & Users
-
-Any client can run:
-```
-/rooms
-/users
-```
-> ✅ `/rooms` lists: `AI` and `General`
-> ✅ `/users` lists: `alice`, `bob`, `charlie`
-
----
-
-### Step 6 — Join Multiple Rooms & Room History
-
-**Charlie** joins `AI`:
-```
-/join AI
-```
-> ✅ Charlie sees the **history** of previous messages in `AI`.
-> ✅ Alice and Bob see: `── [AI] 📥 charlie joined the room. ──`
-
-**Charlie** switches active room to `AI`:
-```
-/room AI
-Hello from Charlie!
-```
-> ✅ All three users in `AI` see the message.
-
----
-
-### Step 7 — Leave Room & Disconnect
-
-**Bob** leaves `AI`:
-```
-/leave AI
-```
-> ✅ Alice and Charlie see: `── [AI] 📤 bob left the room. ──`
-
-**Charlie** closes their terminal (Ctrl+C):
-> ✅ Alice sees: `── [AI] ⚠️  charlie disconnected. ──`
-
----
-
-### Expected Final State
-
-| User | Status | Room |
-|---|---|---|
-| Alice | Online | AI |
-| Bob | Online | *(no active room)* |
-| Charlie | Offline | — |
-
----
-
-## Logs
-
-Server logs are written to `logs/server.log` and rotated at 5 MB (3 backups kept).
-
-```bash
-# View live logs
-Get-Content logs\server.log -Wait     # PowerShell
-tail -f logs/server.log               # bash / WSL
-```
+Server activities are recorded in `logs/server.log`. The logging system employs automatic rotation, capping files at 5 MB and retaining up to 3 historical backups.
