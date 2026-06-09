@@ -1,0 +1,13 @@
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# File Database
+database/*.db
+database/*.db-shm
+database/*.db-wal
+
+# File Log
+logs/*.log
