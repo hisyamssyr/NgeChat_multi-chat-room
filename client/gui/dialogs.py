@@ -1,20 +1,27 @@
 """Reusable modal dialogs for the Multi-Chat Room GUI."""
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import sys
 
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QLineEdit, QTextEdit, QPushButton, QFrame,
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+)
 
-from client.gui.styles import BG_SURFACE, BLUE, TEXT_MUTED
 
 class _BaseDialog(QDialog):
-    """Shared base with standard button row and OK/Cancel logic."""
 
     def __init__(self, title: str, parent=None) -> None:
         super().__init__(parent)
@@ -26,10 +33,7 @@ class _BaseDialog(QDialog):
         self._layout.setContentsMargins(24, 20, 24, 20)
         self._layout.setSpacing(14)
 
-        # Subclasses call _build_body() then _build_buttons()
-
     def _build_buttons(self, ok_text: str = "OK") -> None:
-        """Add the OK / Cancel button row."""
         row = QHBoxLayout()
         row.setSpacing(10)
 
@@ -47,7 +51,6 @@ class _BaseDialog(QDialog):
         self._layout.addLayout(row)
 
     def _on_ok(self) -> None:
-        """Subclasses override to validate before accept()."""
         self.accept()
 
     def _field_label(self, text: str) -> QLabel:
@@ -55,10 +58,8 @@ class _BaseDialog(QDialog):
         lbl.setObjectName("field_label")
         return lbl
 
-# CreateRoomDialog
 
 class CreateRoomDialog(_BaseDialog):
-    """Dialog to create a new chat room."""
 
     def __init__(self, parent=None) -> None:
         super().__init__("Create New Room", parent)
@@ -109,24 +110,21 @@ class CreateRoomDialog(_BaseDialog):
         self.room_name = name
         self.accept()
 
-# PrivateMsgDialog
 
 class PrivateMsgDialog(_BaseDialog):
-    """Dialog to compose a private message."""
 
     def __init__(self, prefill_target: str = "", parent=None) -> None:
         super().__init__("Send Private Message", parent)
-        self.target:  str = ""
+        self.target: str = ""
         self.message: str = ""
         self._prefill = prefill_target
         self._build_body()
         self._build_buttons(ok_text="Send  ✉")
         self.setMinimumSize(420, 320)
-        # Center on parent or screen
         if parent:
             pg = parent.geometry()
             self.move(
-                pg.x() + (pg.width()  - self.minimumWidth())  // 2,
+                pg.x() + (pg.width() - self.minimumWidth()) // 2,
                 pg.y() + (pg.height() - self.minimumHeight()) // 2,
             )
 
@@ -144,7 +142,6 @@ class PrivateMsgDialog(_BaseDialog):
         line.setStyleSheet("color: #475569;")
         self._layout.addWidget(line)
 
-        # Target input
         self._layout.addWidget(self._field_label("To (username)"))
         self._target_input = QLineEdit()
         self._target_input.setPlaceholderText("Enter username…")
@@ -154,7 +151,6 @@ class PrivateMsgDialog(_BaseDialog):
             self._target_input.setStyleSheet("color: #6366F1;")
         self._layout.addWidget(self._target_input)
 
-        # Message input
         self._layout.addWidget(self._field_label("Message"))
         self._msg_input = QTextEdit()
         self._msg_input.setObjectName("msg_input")
@@ -162,14 +158,13 @@ class PrivateMsgDialog(_BaseDialog):
         self._msg_input.setFixedHeight(90)
         self._layout.addWidget(self._msg_input)
 
-        # Error label
         self._error = QLabel("")
         self._error.setObjectName("error_label")
         self._error.hide()
         self._layout.addWidget(self._error)
 
     def _on_ok(self) -> None:
-        target  = self._target_input.text().strip()
+        target = self._target_input.text().strip()
         message = self._msg_input.toPlainText().strip()
 
         if not target:
@@ -181,18 +176,16 @@ class PrivateMsgDialog(_BaseDialog):
             self._error.show()
             return
 
-        self.target  = target
+        self.target = target
         self.message = message
         self.accept()
 
-# JoinPasswordDialog
 
 class JoinPasswordDialog(_BaseDialog):
-    """Dialog shown when joining a room that requires an invite code."""
 
     def __init__(self, room_name: str, parent=None) -> None:
         super().__init__("Invite Code Required", parent)
-        self.password:  str = ""    # attribute name kept for back-compat
+        self.password: str = ""
         self._room_name = room_name
         self._build_body()
         self._build_buttons(ok_text="Join Room  🔓")
@@ -200,7 +193,7 @@ class JoinPasswordDialog(_BaseDialog):
         if parent:
             pg = parent.geometry()
             self.move(
-                pg.x() + (pg.width()  - self.minimumWidth())  // 2,
+                pg.x() + (pg.width() - self.minimumWidth()) // 2,
                 pg.y() + (pg.height() - self.minimumHeight()) // 2,
             )
 
@@ -209,9 +202,7 @@ class JoinPasswordDialog(_BaseDialog):
         title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         self._layout.addWidget(title)
 
-        hint = QLabel(
-            f"Room <b>{self._room_name}</b> requires an invite code to join."
-        )
+        hint = QLabel(f"Room <b>{self._room_name}</b> requires an invite code to join.")
         hint.setObjectName("status_label")
         hint.setWordWrap(True)
         self._layout.addWidget(hint)
@@ -229,7 +220,6 @@ class JoinPasswordDialog(_BaseDialog):
         self._pw_input.setMaxLength(8)
         self._pw_input.setEchoMode(QLineEdit.EchoMode.Normal)
         self._pw_input.returnPressed.connect(self._on_ok)
-        # Make it uppercase automatically.
         self._pw_input.textChanged.connect(
             lambda t: self._pw_input.setText(t.upper()) if t != t.upper() else None
         )
@@ -242,7 +232,6 @@ class JoinPasswordDialog(_BaseDialog):
         self._layout.addWidget(self._error)
 
     def show_error(self, message: str) -> None:
-        """Call externally to show 'wrong code' inline error."""
         self._error.setText(message)
         self._error.show()
 
@@ -259,17 +248,14 @@ class JoinPasswordDialog(_BaseDialog):
         self.password = code
         self.accept()
 
-# RoomCodeDialog
 
 class RoomCodeDialog(_BaseDialog):
-    """Shown to the room creator immediately after the room is created."""
 
     def __init__(self, room_name: str, code: str, parent=None) -> None:
         super().__init__("🎉  Room Created!", parent)
         self._room_name = room_name
-        self._code      = code
+        self._code = code
         self._build_body()
-        # Only an OK/Close button — no cancel.
         ok_btn = QPushButton("Got it!  ✔")
         ok_btn.setObjectName("send_btn")
         ok_btn.setFixedHeight(36)
@@ -279,7 +265,7 @@ class RoomCodeDialog(_BaseDialog):
         if parent:
             pg = parent.geometry()
             self.move(
-                pg.x() + (pg.width()  - self.minimumWidth())  // 2,
+                pg.x() + (pg.width() - self.minimumWidth()) // 2,
                 pg.y() + (pg.height() - self.minimumHeight()) // 2,
             )
 
@@ -329,12 +315,11 @@ class RoomCodeDialog(_BaseDialog):
 
     def _copy_code(self) -> None:
         from PyQt6.QtWidgets import QApplication
+
         QApplication.clipboard().setText(self._code)
 
-# AddFriendDialog
 
 class AddFriendDialog(_BaseDialog):
-    """Dialog to search and add a friend by username."""
 
     def __init__(self, parent=None) -> None:
         super().__init__("Add Friend", parent)
@@ -345,7 +330,7 @@ class AddFriendDialog(_BaseDialog):
         if parent:
             pg = parent.geometry()
             self.move(
-                pg.x() + (pg.width()  - self.minimumWidth())  // 2,
+                pg.x() + (pg.width() - self.minimumWidth()) // 2,
                 pg.y() + (pg.height() - self.minimumHeight()) // 2,
             )
 
@@ -388,12 +373,12 @@ class AddFriendDialog(_BaseDialog):
         self.username = name
         self.accept()
 
-# FriendRequestsDialog
 
 class FriendRequestsDialog(QDialog):
-    """Dialog displaying pending incoming friend requests."""
 
-    def __init__(self, requests: list[str], on_accept_cb, on_decline_cb, parent=None) -> None:
+    def __init__(
+        self, requests: list[str], on_accept_cb, on_decline_cb, parent=None
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Friend Requests")
         self.setModal(True)
@@ -427,12 +412,16 @@ class FriendRequestsDialog(QDialog):
                 accept_btn = QPushButton("Accept")
                 accept_btn.setObjectName("send_btn")
                 accept_btn.setFixedSize(70, 28)
-                accept_btn.clicked.connect(lambda checked=False, r=req: self._handle_accept(r))
+                accept_btn.clicked.connect(
+                    lambda checked=False, r=req: self._handle_accept(r)
+                )
 
                 decline_btn = QPushButton("Decline")
                 decline_btn.setObjectName("danger_btn")
                 decline_btn.setFixedSize(70, 28)
-                decline_btn.clicked.connect(lambda checked=False, r=req: self._handle_decline(r))
+                decline_btn.clicked.connect(
+                    lambda checked=False, r=req: self._handle_decline(r)
+                )
 
                 row.addWidget(accept_btn)
                 row.addWidget(decline_btn)

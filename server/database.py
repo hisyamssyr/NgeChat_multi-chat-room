@@ -1,10 +1,10 @@
-import sqlite3
 import hashlib
-import threading
 import logging
 import os
 import secrets
+import sqlite3
 import string
+import threading
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -216,9 +216,9 @@ class Database:
         if len(room_name) > 64:
             return False, "Room name must be 64 characters or fewer.", ""
 
-        room_name   = room_name.strip()
+        room_name = room_name.strip()
         invite_code = self._generate_invite_code()
-        now         = self._now_utc()
+        now = self._now_utc()
 
         with self._lock:
             try:
@@ -233,7 +233,12 @@ class Database:
                     (room_name, created_by, now),
                 )
                 self._conn.commit()
-                logger.info("Room created: '%s' by %s (code=%s)", room_name, created_by, invite_code)
+                logger.info(
+                    "Room created: '%s' by %s (code=%s)",
+                    room_name,
+                    created_by,
+                    invite_code,
+                )
                 return True, f"Room '{room_name}' created.", invite_code
             except sqlite3.IntegrityError:
                 return False, f"Room '{room_name}' already exists.", ""
@@ -287,7 +292,7 @@ class Database:
 
     def delete_room(self, room_name: str, username: str) -> tuple[bool, str]:
         room_name = room_name.strip()
-        username  = username.strip()
+        username = username.strip()
         with self._lock:
             row = self._conn.execute(
                 "SELECT created_by FROM rooms WHERE room_name = ?",
@@ -300,9 +305,15 @@ class Database:
                 return False, "Only the room owner can delete this room."
 
             try:
-                self._conn.execute("DELETE FROM rooms WHERE room_name = ?", (room_name,))
-                self._conn.execute("DELETE FROM room_members WHERE room_name = ?", (room_name,))
-                self._conn.execute("DELETE FROM messages WHERE room_name = ?", (room_name,))
+                self._conn.execute(
+                    "DELETE FROM rooms WHERE room_name = ?", (room_name,)
+                )
+                self._conn.execute(
+                    "DELETE FROM room_members WHERE room_name = ?", (room_name,)
+                )
+                self._conn.execute(
+                    "DELETE FROM messages WHERE room_name = ?", (room_name,)
+                )
                 self._conn.commit()
                 logger.info("Room deleted permanently: '%s' by %s", room_name, username)
                 return True, f"Room '{room_name}' has been permanently deleted."
@@ -340,10 +351,10 @@ class Database:
 
             return [
                 {
-                    "room_name":   r["room_name"],
-                    "created_by":  r["created_by"],
+                    "room_name": r["room_name"],
+                    "created_by": r["created_by"],
                     "invite_code": r["invite_code"],
-                    "is_member":   bool(r["is_member"]),
+                    "is_member": bool(r["is_member"]),
                 }
                 for r in rows
             ]
@@ -384,7 +395,9 @@ class Database:
                 logger.error("save_message DB error: %s", exc)
                 return False
 
-    def get_room_history(self, room_name: str, limit: int = HISTORY_LIMIT) -> list[dict]:
+    def get_room_history(
+        self, room_name: str, limit: int = HISTORY_LIMIT
+    ) -> list[dict]:
         # Fetch the most recent `limit` messages ordered oldest-first so the
         # client can render them chronologically without reversing the list.
         with self._lock:
@@ -404,8 +417,8 @@ class Database:
             ).fetchall()
             return [
                 {
-                    "sender":    r["sender"],
-                    "message":   r["message"],
+                    "sender": r["sender"],
+                    "message": r["message"],
                     "timestamp": r["timestamp"],
                 }
                 for r in rows
@@ -434,7 +447,9 @@ class Database:
                 logger.error("save_private_message DB error: %s", exc)
                 return False
 
-    def get_private_history(self, user1: str, user2: str, limit: int = HISTORY_LIMIT) -> list[dict]:
+    def get_private_history(
+        self, user1: str, user2: str, limit: int = HISTORY_LIMIT
+    ) -> list[dict]:
         with self._lock:
             rows = self._conn.execute(
                 """
@@ -452,8 +467,8 @@ class Database:
             ).fetchall()
             return [
                 {
-                    "sender":    r["sender"],
-                    "message":   r["message"],
+                    "sender": r["sender"],
+                    "message": r["message"],
                     "timestamp": r["timestamp"],
                 }
                 for r in rows

@@ -1,12 +1,1 @@
-# Cache Python
-client/__pycache__/*
-server/__pycache__/*
-
-# File Database
-database/*
-
-# File Log
-logs/*
-
-# SSL Certs
-certs/*
+# 

@@ -1,26 +1,20 @@
-# client/gui/styles.py
-# --------------------
 # Premium Modern Dark Theme QSS stylesheet and colour constants for the GUI.
 # Inspired by modern chat apps (Discord / Slack) using Slate & Indigo palettes.
 
-# ── Colour palette (also used in Python code for dynamic HTML) ────────────────
-
-BG_DEEP     = "#0F172A"    # slate-900: main window background
-BG_SURFACE  = "#1E293B"    # slate-800: panels, sidebars, dialogs
-BG_ELEVATED = "#334155"    # slate-700: inputs, list items (hover), cards
-BORDER      = "#475569"    # slate-600: all borders
-BLUE        = "#6366F1"    # indigo-500: accent — links, selection, active room
-GREEN       = "#10B981"    # emerald-500: success, online indicator
-RED         = "#EF4444"    # red-500: danger, error, logout button
-AMBER       = "#F59E0B"    # amber-500: warning, unread badge
-PURPLE      = "#8B5CF6"    # violet-500: private messages
-TEXT        = "#F8FAFC"    # slate-50: primary text
-TEXT_MUTED  = "#94A3B8"    # slate-400: secondary text, timestamps, labels
-OWN_MSG_BG  = "#3730A3"    # indigo-800: own broadcast message background
-PM_BG       = "#4C1D95"    # violet-900: incoming private message background
-NOTIF_COLOR = "#64748B"    # slate-500: system notification text
-
-# ── QSS stylesheet ────────────────────────────────────────────────────────────
+BG_DEEP = "#0F172A"
+BG_SURFACE = "#1E293B"
+BG_ELEVATED = "#334155"
+BORDER = "#475569"
+BLUE = "#6366F1"
+GREEN = "#10B981"
+RED = "#EF4444"
+AMBER = "#F59E0B"
+PURPLE = "#8B5CF6"
+TEXT = "#F8FAFC"
+TEXT_MUTED = "#94A3B8"
+OWN_MSG_BG = "#3730A3"
+PM_BG = "#4C1D95"
+NOTIF_COLOR = "#64748B"
 
 DARK_THEME = f"""
 
@@ -424,5 +418,4 @@ QMessageBox QPushButton {{
 
 
 def apply_dark_theme(app) -> None:
-    # Apply the dark QSS theme to a QApplication instance.
     app.setStyleSheet(DARK_THEME)

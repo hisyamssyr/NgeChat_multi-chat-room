@@ -1,39 +1,39 @@
 """Wire-protocol helpers shared between server modules."""
 
 import json
-import struct
 import logging
+import struct
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # 4-byte big-endian length prefix used on every packet.
 _LENGTH_FORMAT = "!I"
-_LENGTH_SIZE   = struct.calcsize(_LENGTH_FORMAT)
+_LENGTH_SIZE = struct.calcsize(_LENGTH_FORMAT)
 
 # Guards against memory exhaustion from a misbehaving/malicious client.
 MAX_PACKET_SIZE = 16 * 1024 * 1024
 
 REQUIRED_FIELDS: dict[str, list[str]] = {
-    "register":        ["username", "password"],
-    "login":           ["username", "password"],
-    "logout":          [],
-    "create_room":     ["room"],
-    "join_room":       ["room"],
-    "join_by_code":    ["code"],
-    "leave_room":      ["room"],
-    "broadcast":       ["room", "message"],
+    "register": ["username", "password"],
+    "login": ["username", "password"],
+    "logout": [],
+    "create_room": ["room"],
+    "join_room": ["room"],
+    "join_by_code": ["code"],
+    "leave_room": ["room"],
+    "broadcast": ["room", "message"],
     "private_message": ["target", "message"],
-    "get_rooms":       [],
-    "get_users":       [],
-    "delete_room":     ["room"],
-    "add_friend":      ["target"],
-    "remove_friend":   ["target"],
-    "get_friends":     [],
-    "accept_friend":   ["target"],
-    "decline_friend":  ["target"],
+    "get_rooms": [],
+    "get_users": [],
+    "delete_room": ["room"],
+    "add_friend": ["target"],
+    "remove_friend": ["target"],
+    "get_friends": [],
+    "accept_friend": ["target"],
+    "decline_friend": ["target"],
     "get_pending_requests": [],
-    "get_pm_history":  ["target"],
+    "get_pm_history": ["target"],
 }
 
 
@@ -62,7 +62,8 @@ def recv_packet(sock) -> dict | None:
     if length > MAX_PACKET_SIZE:
         logger.error(
             "recv_packet: payload length %d exceeds MAX_PACKET_SIZE (%d). Dropping connection.",
-            length, MAX_PACKET_SIZE,
+            length,
+            MAX_PACKET_SIZE,
         )
         return None
 
@@ -98,19 +99,19 @@ def make_response(status: str, message: str, **extra: Any) -> dict:
 
 def make_broadcast_push(room: str, sender: str, message: str, timestamp: str) -> dict:
     return {
-        "type":      "broadcast",
-        "room":      room,
-        "sender":    sender,
-        "message":   message,
+        "type": "broadcast",
+        "room": room,
+        "sender": sender,
+        "message": message,
         "timestamp": timestamp,
     }
 
 
 def make_private_push(sender: str, message: str, timestamp: str) -> dict:
     return {
-        "type":      "private_message",
-        "sender":    sender,
-        "message":   message,
+        "type": "private_message",
+        "sender": sender,
+        "message": message,
         "timestamp": timestamp,
     }
 
@@ -160,7 +161,8 @@ def validate_packet(packet: dict) -> str:
         raise PacketError(f"Unknown packet type: '{ptype}'.")
 
     missing = [
-        field for field in REQUIRED_FIELDS[ptype]
+        field
+        for field in REQUIRED_FIELDS[ptype]
         if field not in packet or packet[field] is None
     ]
     if missing:

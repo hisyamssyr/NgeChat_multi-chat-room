@@ -1,24 +1,28 @@
-# Flow
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import sys
 
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QFrame, QWidget,
+    QDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont, QIcon
 
+from client.gui.styles import BORDER, GREEN, RED, TEXT_MUTED
 from client.network_client import NetworkClient
-from client.gui.styles import (
-    BG_DEEP, BG_SURFACE, BLUE, GREEN, RED, TEXT, TEXT_MUTED, BORDER,
-)
+
 
 class LoginWindow(QDialog):
-    # After exec() returns Accepted:
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Multi-Chat Room — Sign In")
@@ -26,22 +30,20 @@ class LoginWindow(QDialog):
         self.setMinimumSize(440, 560)
         self.resize(440, 560)
         self.setWindowFlags(
-            Qt.WindowType.Window |
-            Qt.WindowType.CustomizeWindowHint |
-            Qt.WindowType.WindowTitleHint |
-            Qt.WindowType.WindowCloseButtonHint |
-            Qt.WindowType.WindowMaximizeButtonHint |
-            Qt.WindowType.WindowMinimizeButtonHint
+            Qt.WindowType.Window
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.WindowMaximizeButtonHint
+            | Qt.WindowType.WindowMinimizeButtonHint
         )
 
-        # Public outputs (set on accept)
         self.network_client: NetworkClient | None = None
         self.username: str = ""
 
-        # Internal state
-        self._pending_action: str | None = None   # "login" | "register"
-        self._reg_username:   str = ""
-        self._reg_password:   str = ""
+        self._pending_action: str | None = None
+        self._reg_username: str = ""
+        self._reg_password: str = ""
 
         self._setup_ui()
 
@@ -54,7 +56,6 @@ class LoginWindow(QDialog):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Outer wrapper for centering the card
         wrapper = QWidget()
         wlayout = QVBoxLayout(wrapper)
         wlayout.setContentsMargins(30, 30, 30, 30)
@@ -67,7 +68,6 @@ class LoginWindow(QDialog):
         card_layout.setContentsMargins(36, 40, 36, 40)
         card_layout.setSpacing(16)
 
-        # Logo + title
         title_lbl = QLabel("💬 NgeChat")
         title_lbl.setObjectName("login_title")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -127,7 +127,7 @@ class LoginWindow(QDialog):
         div.setFrameShape(QFrame.Shape.HLine)
         div.setStyleSheet(f"color: {BORDER};")
         card_layout.addWidget(div)
-        
+
         card_layout.addSpacing(8)
 
         lbl_srv = QLabel("SERVER CONNECTION")
@@ -167,7 +167,6 @@ class LoginWindow(QDialog):
         self._password_input.setFocus()
 
     def _set_busy(self, busy: bool) -> None:
-        """Disable/enable buttons during an async operation."""
         self._login_btn.setEnabled(not busy)
         self._register_btn.setEnabled(not busy)
         self._username_input.setReadOnly(busy)
@@ -192,7 +191,6 @@ class LoginWindow(QDialog):
     # ------------------------------------------------------------------
 
     def _get_or_connect(self) -> tuple[bool, str]:
-        """Return the existing connected NetworkClient, or create + connect one."""
         host = self._host_input.text().strip()
         try:
             port = int(self._port_input.text().strip())
@@ -202,13 +200,11 @@ class LoginWindow(QDialog):
         if self.network_client and self.network_client.is_connected:
             return True, ""
 
-        # Create new client and connect.
         nc = NetworkClient(host, port)
         ok, err = nc.connect_to_server()
         if not ok:
             return False, err
 
-        # Wire packet signal; disconnect any previous connection first.
         nc.packet_received.connect(self._on_packet)
         self.network_client = nc
         return True, ""
@@ -262,7 +258,6 @@ class LoginWindow(QDialog):
             self._show_error(err)
             return
 
-        # Save credentials — after register ok, we auto-login.
         self._reg_username = username
         self._reg_password = password
         self._pending_action = "register"
@@ -275,21 +270,18 @@ class LoginWindow(QDialog):
 
     def _on_packet(self, packet: dict) -> None:
         status = packet.get("status")
-        msg    = packet.get("message", "")
+        msg = packet.get("message", "")
 
         if status == "ok":
             if self._pending_action == "register":
-                # Auto-login after successful registration.
                 self._show_info("Registered! Logging in…")
                 self._pending_action = "login"
-                self.network_client.send_login(
-                    self._reg_username, self._reg_password
-                )
+                self.network_client.send_login(self._reg_username, self._reg_password)
 
             elif self._pending_action == "login":
                 self.username = self._username_input.text().strip()
                 self._show_info(f"Welcome, {self.username}!")
-                self.accept()   # closes the dialog
+                self.accept()
 
         elif status == "error":
             self._show_error(msg)
