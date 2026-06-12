@@ -115,6 +115,13 @@ class Database:
                 # SQLite < 3.35 does not support DROP COLUMN; adding the status
                 # column to existing databases is the only migration needed here.
                 "ALTER TABLE friends ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'",
+                """CREATE TABLE IF NOT EXISTS private_messages (
+                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sender    TEXT    NOT NULL,
+                    target    TEXT    NOT NULL,
+                    message   TEXT    NOT NULL,
+                    timestamp TEXT    NOT NULL
+                )""",
             ]
             for sql in migrations:
                 try:
@@ -394,6 +401,54 @@ class Database:
                 ORDER BY id ASC
                 """,
                 (room_name, limit),
+            ).fetchall()
+            return [
+                {
+                    "sender":    r["sender"],
+                    "message":   r["message"],
+                    "timestamp": r["timestamp"],
+                }
+                for r in rows
+            ]
+
+    def save_private_message(
+        self,
+        sender: str,
+        target: str,
+        message: str,
+        timestamp: str | None = None,
+    ) -> bool:
+        if timestamp is None:
+            timestamp = self._now_utc()
+
+        with self._lock:
+            try:
+                self._conn.execute(
+                    "INSERT INTO private_messages (sender, target, message, timestamp)"
+                    " VALUES (?, ?, ?, ?)",
+                    (sender, target, message, timestamp),
+                )
+                self._conn.commit()
+                return True
+            except sqlite3.Error as exc:
+                logger.error("save_private_message DB error: %s", exc)
+                return False
+
+    def get_private_history(self, user1: str, user2: str, limit: int = HISTORY_LIMIT) -> list[dict]:
+        with self._lock:
+            rows = self._conn.execute(
+                """
+                SELECT sender, message, timestamp
+                FROM (
+                    SELECT id, sender, message, timestamp
+                    FROM   private_messages
+                    WHERE  (sender = ? AND target = ?) OR (sender = ? AND target = ?)
+                    ORDER  BY id DESC
+                    LIMIT  ?
+                )
+                ORDER BY id ASC
+                """,
+                (user1, user2, user2, user1, limit),
             ).fetchall()
             return [
                 {

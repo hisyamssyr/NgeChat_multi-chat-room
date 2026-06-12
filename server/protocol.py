@@ -33,6 +33,7 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "accept_friend":   ["target"],
     "decline_friend":  ["target"],
     "get_pending_requests": [],
+    "get_pm_history":  ["target"],
 }
 
 

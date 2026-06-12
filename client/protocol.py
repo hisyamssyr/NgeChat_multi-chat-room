@@ -98,6 +98,9 @@ def build_private_message(target: str, message: str) -> dict:
 def build_get_rooms() -> dict:
     return {"type": "get_rooms"}
 
+def build_get_pm_history(target: str) -> dict:
+    return {"type": "get_pm_history", "target": target}
+
 def build_get_users() -> dict:
     return {"type": "get_users"}
 

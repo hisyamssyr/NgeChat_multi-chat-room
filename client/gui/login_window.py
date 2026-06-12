@@ -56,7 +56,6 @@ class LoginWindow(QDialog):
 
         # Outer wrapper for centering the card
         wrapper = QWidget()
-        wrapper.setStyleSheet(f"background-color: {BG_DEEP};")
         wlayout = QVBoxLayout(wrapper)
         wlayout.setContentsMargins(30, 30, 30, 30)
         wlayout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -65,11 +64,11 @@ class LoginWindow(QDialog):
         card.setObjectName("login_card")
         card.setFixedWidth(380)
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(32, 32, 32, 32)
+        card_layout.setContentsMargins(36, 40, 36, 40)
         card_layout.setSpacing(16)
 
         # Logo + title
-        title_lbl = QLabel("🗨 Multi-Chat Room")
+        title_lbl = QLabel("💬 NgeChat")
         title_lbl.setObjectName("login_title")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title_lbl)
@@ -79,7 +78,7 @@ class LoginWindow(QDialog):
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(subtitle)
 
-        card_layout.addSpacing(8)
+        card_layout.addSpacing(12)
 
         lbl_user = QLabel("USERNAME")
         lbl_user.setObjectName("field_label")
@@ -108,33 +107,35 @@ class LoginWindow(QDialog):
         self._status_label.hide()
         card_layout.addWidget(self._status_label)
 
-        card_layout.addSpacing(4)
+        card_layout.addSpacing(8)
 
         self._login_btn = QPushButton("Login")
         self._login_btn.setObjectName("login_btn")
-        self._login_btn.setFixedHeight(40)
+        self._login_btn.setFixedHeight(44)
         self._login_btn.clicked.connect(self._on_login_clicked)
         card_layout.addWidget(self._login_btn)
 
         self._register_btn = QPushButton("Register New Account")
         self._register_btn.setObjectName("register_btn")
-        self._register_btn.setFixedHeight(38)
+        self._register_btn.setFixedHeight(44)
         self._register_btn.clicked.connect(self._on_register_clicked)
         card_layout.addWidget(self._register_btn)
 
-        card_layout.addSpacing(8)
+        card_layout.addSpacing(16)
 
         div = QFrame()
         div.setFrameShape(QFrame.Shape.HLine)
         div.setStyleSheet(f"color: {BORDER};")
         card_layout.addWidget(div)
+        
+        card_layout.addSpacing(8)
 
         lbl_srv = QLabel("SERVER CONNECTION")
         lbl_srv.setObjectName("field_label")
         card_layout.addWidget(lbl_srv)
 
         srv_row = QHBoxLayout()
-        srv_row.setSpacing(8)
+        srv_row.setSpacing(12)
 
         self._host_input = QLineEdit("127.0.0.1")
         self._host_input.setObjectName("server_input")
@@ -142,7 +143,7 @@ class LoginWindow(QDialog):
         srv_row.addWidget(self._host_input, 3)
 
         colon = QLabel(":")
-        colon.setStyleSheet(f"color: {TEXT_MUTED};")
+        colon.setStyleSheet(f"color: {TEXT_MUTED}; font-weight: bold;")
         colon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         srv_row.addWidget(colon)
 
@@ -150,7 +151,7 @@ class LoginWindow(QDialog):
         self._port_input.setObjectName("server_input")
         self._port_input.setPlaceholderText("Port")
         self._port_input.setMaxLength(5)
-        self._port_input.setFixedWidth(72)
+        self._port_input.setFixedWidth(80)
         srv_row.addWidget(self._port_input)
 
         card_layout.addLayout(srv_row)

@@ -1,26 +1,24 @@
 # client/gui/styles.py
 # --------------------
-# Dark theme QSS stylesheet and colour constants for the GUI.
-#
-# Inspired by GitHub Dark — dark navy tones with blue accent, green for
-# success, and red for danger.  Applied once to the QApplication at startup.
+# Premium Modern Dark Theme QSS stylesheet and colour constants for the GUI.
+# Inspired by modern chat apps (Discord / Slack) using Slate & Indigo palettes.
 
 # ── Colour palette (also used in Python code for dynamic HTML) ────────────────
 
-BG_DEEP     = "#0d1117"    # main window background
-BG_SURFACE  = "#161b22"    # panels, sidebars, dialogs
-BG_ELEVATED = "#21262d"    # inputs, list items (hover), cards
-BORDER      = "#30363d"    # all borders
-BLUE        = "#58a6ff"    # accent — links, selection, active room
-GREEN       = "#3fb950"    # success, online indicator, own username
-RED         = "#f85149"    # danger, error, logout button
-AMBER       = "#e3b341"    # warning, unread badge
-PURPLE      = "#a78bfa"    # private messages
-TEXT        = "#c9d1d9"    # primary text
-TEXT_MUTED  = "#8b949e"    # secondary text, timestamps, labels
-OWN_MSG_BG  = "#1a3a5c"    # own broadcast message background
-PM_BG       = "#2d1b4e"    # incoming private message background
-NOTIF_COLOR = "#484f58"    # system notification text
+BG_DEEP     = "#0F172A"    # slate-900: main window background
+BG_SURFACE  = "#1E293B"    # slate-800: panels, sidebars, dialogs
+BG_ELEVATED = "#334155"    # slate-700: inputs, list items (hover), cards
+BORDER      = "#475569"    # slate-600: all borders
+BLUE        = "#6366F1"    # indigo-500: accent — links, selection, active room
+GREEN       = "#10B981"    # emerald-500: success, online indicator
+RED         = "#EF4444"    # red-500: danger, error, logout button
+AMBER       = "#F59E0B"    # amber-500: warning, unread badge
+PURPLE      = "#8B5CF6"    # violet-500: private messages
+TEXT        = "#F8FAFC"    # slate-50: primary text
+TEXT_MUTED  = "#94A3B8"    # slate-400: secondary text, timestamps, labels
+OWN_MSG_BG  = "#3730A3"    # indigo-800: own broadcast message background
+PM_BG       = "#4C1D95"    # violet-900: incoming private message background
+NOTIF_COLOR = "#64748B"    # slate-500: system notification text
 
 # ── QSS stylesheet ────────────────────────────────────────────────────────────
 
@@ -35,8 +33,8 @@ QMainWindow, QDialog {{
 QWidget {{
     background-color: {BG_DEEP};
     color: {TEXT};
-    font-family: "Segoe UI", "SF Pro Display", Arial, sans-serif;
-    font-size: 13px;
+    font-family: "Inter", "Segoe UI", "SF Pro Display", sans-serif;
+    font-size: 14px;
 }}
 
 /* ── Panels ───────────────────────────────────────────────────────── */
@@ -66,14 +64,14 @@ QFrame#chat_header_bar {{
 }}
 
 QFrame#input_bar {{
-    background-color: {BG_SURFACE};
+    background-color: {BG_DEEP};
     border-top: 1px solid {BORDER};
 }}
 
 QFrame#login_card {{
     background-color: {BG_SURFACE};
     border: 1px solid {BORDER};
-    border-radius: 14px;
+    border-radius: 16px;
 }}
 
 /* ── Labels ───────────────────────────────────────────────────────── */
@@ -83,67 +81,67 @@ QLabel {{
 }}
 
 QLabel#app_title {{
-    color: {BLUE};
-    font-size: 17px;
-    font-weight: bold;
+    color: {TEXT};
+    font-size: 18px;
+    font-weight: 800;
     letter-spacing: 0.5px;
 }}
 
 QLabel#username_label {{
-    color: {GREEN};
+    color: {TEXT_MUTED};
     font-weight: bold;
-    font-size: 13px;
+    font-size: 14px;
 }}
 
 QLabel#section_header {{
     color: {TEXT_MUTED};
-    font-size: 10px;
-    font-weight: bold;
+    font-size: 11px;
+    font-weight: 800;
     letter-spacing: 1.5px;
-    padding: 10px 14px 4px 14px;
+    padding: 14px 16px 6px 16px;
     background-color: transparent;
 }}
 
 QLabel#chat_room_name {{
     color: {TEXT};
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
     padding: 0px 14px;
 }}
 
 QLabel#status_label {{
     color: {TEXT_MUTED};
-    font-size: 12px;
+    font-size: 13px;
     padding: 4px 0px;
 }}
 
 QLabel#error_label {{
     color: {RED};
-    font-size: 12px;
+    font-size: 13px;
     padding: 4px 0px;
 }}
 
 QLabel#info_label {{
     color: {GREEN};
-    font-size: 12px;
+    font-size: 13px;
     padding: 4px 0px;
 }}
 
 QLabel#login_title {{
-    color: {BLUE};
-    font-size: 22px;
-    font-weight: bold;
+    color: {TEXT};
+    font-size: 24px;
+    font-weight: 800;
 }}
 
 QLabel#login_subtitle {{
     color: {TEXT_MUTED};
-    font-size: 12px;
+    font-size: 14px;
 }}
 
 QLabel#field_label {{
     color: {TEXT_MUTED};
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     letter-spacing: 0.5px;
 }}
 
@@ -152,141 +150,137 @@ QLabel#field_label {{
 QPushButton {{
     background-color: {BG_ELEVATED};
     color: {TEXT};
-    border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-weight: 500;
-    min-height: 28px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    min-height: 32px;
 }}
 
 QPushButton:hover {{
-    background-color: #2d333b;
-    border-color: {BLUE};
-    color: #ffffff;
+    background-color: #475569; /* slate-600 */
 }}
 
 QPushButton:pressed {{
-    background-color: {BG_SURFACE};
+    background-color: {BORDER};
 }}
 
 QPushButton#send_btn {{
-    background-color: #238636;
+    background-color: {BLUE};
     color: #ffffff;
     border: none;
-    border-radius: 6px;
-    padding: 8px 22px;
+    border-radius: 8px;
+    padding: 8px 24px;
     font-weight: bold;
-    font-size: 13px;
+    font-size: 14px;
     min-width: 80px;
 }}
 
 QPushButton#send_btn:hover {{
-    background-color: #2ea043;
+    background-color: #4F46E5; /* indigo-600 */
 }}
 
 QPushButton#send_btn:pressed {{
-    background-color: #1a7f37;
+    background-color: #4338CA; /* indigo-700 */
 }}
 
 QPushButton#login_btn {{
-    background-color: #1f6feb;
+    background-color: {BLUE};
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    padding: 9px 0px;
+    border-radius: 10px;
+    padding: 12px 0px;
     font-weight: bold;
-    font-size: 13px;
+    font-size: 14px;
 }}
 
 QPushButton#login_btn:hover {{
-    background-color: #388bfd;
+    background-color: #4F46E5;
 }}
 
 QPushButton#register_btn {{
-    background-color: {BG_ELEVATED};
-    color: {TEXT};
+    background-color: transparent;
+    color: {TEXT_MUTED};
     border: 1px solid {BORDER};
-    border-radius: 8px;
-    padding: 9px 0px;
-    font-size: 13px;
+    border-radius: 10px;
+    padding: 12px 0px;
+    font-weight: 600;
+    font-size: 14px;
 }}
 
 QPushButton#register_btn:hover {{
-    background-color: #2d333b;
-    border-color: {BLUE};
+    background-color: {BG_ELEVATED};
+    color: {TEXT};
 }}
 
 QPushButton#danger_btn {{
-    background-color: #da3633;
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-weight: 500;
+    background-color: transparent;
+    color: {RED};
+    border: 1px solid {RED};
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-weight: 600;
 }}
 
 QPushButton#danger_btn:hover {{
     background-color: {RED};
+    color: #ffffff;
 }}
 
 QPushButton#accent_btn {{
-    background-color: #1f6feb;
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-weight: 500;
+    background-color: transparent;
+    color: {BLUE};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
 }}
 
 QPushButton#accent_btn:hover {{
-    background-color: #388bfd;
+    background-color: {BG_ELEVATED};
+    border-color: {BLUE};
 }}
 
 QPushButton#icon_btn {{
     background-color: transparent;
-    border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    padding: 6px;
     color: {TEXT_MUTED};
     font-size: 16px;
-    min-width: 36px;
-    max-width: 36px;
-    min-height: 32px;
-    max-height: 32px;
 }}
 
 QPushButton#icon_btn:hover {{
     background-color: {BG_ELEVATED};
     color: {TEXT};
-    border-color: {BLUE};
 }}
 
 QPushButton:disabled {{
     background-color: {BG_SURFACE};
-    color: {NOTIF_COLOR};
-    border-color: {BG_ELEVATED};
+    color: {BORDER};
+    border-color: {BG_SURFACE};
 }}
 
 /* ── Input fields ─────────────────────────────────────────────────── */
 
 QLineEdit {{
-    background-color: {BG_ELEVATED};
+    background-color: {BG_DEEP};
     color: {TEXT};
     border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 7px 12px;
-    font-size: 13px;
-    selection-background-color: #264f78;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    selection-background-color: {BLUE};
 }}
 
 QLineEdit:focus {{
     border-color: {BLUE};
-    background-color: #1c2128;
+    background-color: #0B1120;
 }}
 
 QLineEdit#server_input {{
     font-family: "Consolas", "Courier New", monospace;
-    font-size: 12px;
+    font-size: 13px;
 }}
 
 /* ── Chat / message area ──────────────────────────────────────────── */
@@ -295,26 +289,25 @@ QTextBrowser#chat_area {{
     background-color: {BG_DEEP};
     color: {TEXT};
     border: none;
-    padding: 8px 12px;
-    font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
-    selection-background-color: #264f78;
+    padding: 16px 24px;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    selection-background-color: {BLUE};
 }}
 
 QTextEdit#msg_input {{
-    background-color: {BG_ELEVATED};
+    background-color: {BG_SURFACE};
     color: {TEXT};
     border: 1px solid {BORDER};
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 13px;
-    selection-background-color: #264f78;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 14px;
+    selection-background-color: {BLUE};
 }}
 
 QTextEdit#msg_input:focus {{
     border-color: {BLUE};
-    background-color: #1c2128;
 }}
 
 /* ── List widgets ─────────────────────────────────────────────────── */
@@ -323,15 +316,16 @@ QListWidget {{
     background-color: transparent;
     border: none;
     outline: none;
-    padding: 4px;
+    padding: 8px;
 }}
 
 QListWidget::item {{
-    padding: 7px 12px;
-    border-radius: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
     color: {TEXT_MUTED};
-    margin: 1px 0px;
-    font-size: 13px;
+    margin: 2px 0px;
+    font-size: 14px;
+    font-weight: 500;
 }}
 
 QListWidget::item:hover {{
@@ -340,28 +334,29 @@ QListWidget::item:hover {{
 }}
 
 QListWidget::item:selected {{
-    background-color: #1f3a5f;
-    color: {BLUE};
-    font-weight: 600;
+    background-color: {BLUE};
+    color: #ffffff;
+    font-weight: 700;
 }}
 
 /* ── Scrollbar ────────────────────────────────────────────────────── */
 
 QScrollBar:vertical {{
     background-color: transparent;
-    width: 8px;
+    width: 10px;
     border: none;
     margin: 0;
 }}
 
 QScrollBar::handle:vertical {{
-    background-color: {BORDER};
-    border-radius: 4px;
-    min-height: 24px;
+    background-color: {BG_ELEVATED};
+    border-radius: 5px;
+    min-height: 30px;
+    margin: 2px;
 }}
 
 QScrollBar::handle:vertical:hover {{
-    background-color: {TEXT_MUTED};
+    background-color: {BORDER};
 }}
 
 QScrollBar::add-line:vertical,
@@ -381,13 +376,13 @@ QStatusBar {{
     background-color: {BG_SURFACE};
     color: {TEXT_MUTED};
     border-top: 1px solid {BORDER};
-    font-size: 11px;
-    padding: 0px 8px;
+    font-size: 12px;
+    padding: 0px 12px;
 }}
 
 QStatusBar QLabel {{
     color: {TEXT_MUTED};
-    padding: 2px 4px;
+    padding: 4px 6px;
 }}
 
 /* ── Tooltips ─────────────────────────────────────────────────────── */
@@ -396,20 +391,20 @@ QToolTip {{
     background-color: {BG_ELEVATED};
     color: {TEXT};
     border: 1px solid {BORDER};
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 12px;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
 }}
 
 /* ── Splitter ─────────────────────────────────────────────────────── */
 
 QSplitter::handle {{
-    background-color: {BORDER};
-    width: 1px;
+    background-color: transparent;
+    width: 2px;
 }}
 
 QSplitter::handle:hover {{
-    background-color: {BLUE};
+    background-color: {BORDER};
 }}
 
 /* ── Message box ──────────────────────────────────────────────────── */

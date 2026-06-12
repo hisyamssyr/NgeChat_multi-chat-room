@@ -151,6 +151,10 @@ class NetworkClient(QObject):
     def send_get_users(self) -> bool:
         return self.send(build_get_users())
 
+    def send_get_pm_history(self, target: str) -> bool:
+        from client.protocol import build_get_pm_history
+        return self.send(build_get_pm_history(target))
+
     def send_get_friends(self) -> bool:
         return self.send(build_get_friends())
 

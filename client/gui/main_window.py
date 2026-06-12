@@ -5,9 +5,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from datetime import datetime, timezone
 
 from PyQt6.QtWidgets import (
+    QStackedWidget, QScrollArea,
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QListWidget, QListWidgetItem,
-    QTextBrowser, QTextEdit, QFrame, QSplitter, QStatusBar,
+    QTextBrowser, QSizePolicy, QTextEdit, QFrame, QSplitter, QStatusBar,
     QSizePolicy, QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, QSize, pyqtSlot
@@ -34,173 +35,6 @@ def _fmt_ts(timestamp: str) -> str:
         return timestamp.split(" ")[1][:5]
     except Exception:
         return ""
-
-
-def _escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\n", "<br/>")
-    )
-
-
-def _html_broadcast(sender: str, message: str, timestamp: str, is_own: bool) -> str:
-    ts  = _fmt_ts(timestamp)
-    msg = _escape(message)
-
-    if is_own:
-        return (
-            '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-            ' style="margin:3px 0;">'
-            '<tr>'
-            '<td width="20%"></td>'
-            '<td align="right" style="padding:0 10px 0 0;">'
-            f'<div style="'
-            f'display:inline-block;'
-            f'background-color:#1a3a5c;'
-            f'border-radius:16px 2px 16px 16px;'
-            f'padding:10px 14px 7px 14px;'
-            f'max-width:100%;'
-            f'">'
-            f'<div style="color:#c9d1d9; font-size:13px;">{msg}</div>'
-            f'<div style="color:#6e8ab0; font-size:10px; text-align:right; margin-top:5px;">'
-            f'&#10003; {ts}</div>'
-            '</div>'
-            '</td>'
-            '</tr>'
-            '</table>'
-        )
-    return (
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="margin:3px 0;">'
-        '<tr>'
-        '<td align="left" style="padding:0 0 0 10px;">'
-        f'<div style="'
-        f'display:inline-block;'
-        f'background-color:#21262d;'
-        f'border-radius:2px 16px 16px 16px;'
-        f'padding:10px 14px 7px 14px;'
-        f'max-width:80%;'
-        f'">'
-        f'<div style="color:#58a6ff; font-size:11px; font-weight:bold;'
-        f' margin-bottom:4px;">{_escape(sender)}</div>'
-        f'<div style="color:#c9d1d9; font-size:13px;">{msg}</div>'
-        f'<div style="color:#6e7681; font-size:10px; margin-top:5px;">{ts}</div>'
-        '</div>'
-        '</td>'
-        '<td width="20%"></td>'
-        '</tr>'
-        '</table>'
-    )
-
-
-def _html_private(sender: str, message: str, timestamp: str) -> str:
-    ts  = _fmt_ts(timestamp)
-    msg = _escape(message)
-    return (
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="margin:3px 0;">'
-        '<tr>'
-        '<td align="left" style="padding:0 0 0 10px;">'
-        f'<div style="'
-        f'display:inline-block;'
-        f'background-color:#2d1b4e;'
-        f'border-radius:2px 16px 16px 16px;'
-        f'border-left:3px solid #a78bfa;'
-        f'padding:10px 14px 7px 14px;'
-        f'max-width:80%;'
-        f'">'
-        f'<div style="color:#a78bfa; font-size:11px; font-weight:bold;'
-        f' margin-bottom:4px;">&#128233; {_escape(sender)} &nbsp;<span'
-        f' style="font-style:italic; font-weight:normal; color:#8b6fc7;">private</span></div>'
-        f'<div style="color:#c9d1d9; font-size:13px;">{msg}</div>'
-        f'<div style="color:#6e7681; font-size:10px; margin-top:5px;">{ts}</div>'
-        '</div>'
-        '</td>'
-        '<td width="20%"></td>'
-        '</tr>'
-        '</table>'
-    )
-
-
-def _html_notification(message: str) -> str:
-    msg = _escape(message)
-    return (
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="margin:6px 0;">'
-        '<tr>'
-        '<td align="center">'
-        f'<span style="'
-        f'color:#484f58;'
-        f'font-size:11px;'
-        f'font-style:italic;'
-        f'background-color:#161b22;'
-        f'border-radius:10px;'
-        f'padding:3px 12px;'
-        f'">{msg}</span>'
-        '</td>'
-        '</tr>'
-        '</table>'
-    )
-
-
-def _html_history_separator(room: str) -> str:
-    return (
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="margin:10px 0;">'
-        '<tr>'
-        '<td align="center">'
-        f'<span style="'
-        f'color:#30363d;'
-        f'font-size:11px;'
-        f'background-color:#161b22;'
-        f'border-radius:8px;'
-        f'padding:2px 14px;'
-        f'">&#9679; History: #{_escape(room)} &#9679;</span>'
-        '</td>'
-        '</tr>'
-        '</table>'
-    )
-
-
-def _html_system(message: str, color: str = TEXT_MUTED) -> str:
-    return (
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="margin:4px 0;">'
-        '<tr>'
-        '<td align="center">'
-        f'<span style="color:{color}; font-size:12px;">{_escape(message)}</span>'
-        '</td>'
-        '</tr>'
-        '</table>'
-    )
-
-
-def _html_pm_out(message: str, timestamp: str) -> str:
-    ts  = _fmt_ts(timestamp)
-    msg = _escape(message)
-    return (
-        '<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-        ' style="margin:3px 0;">'
-        '<tr>'
-        '<td width="20%"></td>'
-        '<td align="right" style="padding:0 10px 0 0;">'
-        f'<div style="'
-        f'display:inline-block;'
-        f'background-color:#3b1f6e;'
-        f'border-radius:16px 2px 16px 16px;'
-        f'padding:10px 14px 7px 14px;'
-        f'max-width:100%;'
-        f'">'
-        f'<div style="color:#c9d1d9; font-size:13px;">{msg}</div>'
-        f'<div style="color:#9b72cf; font-size:10px; text-align:right; margin-top:5px;">&#10003; {ts}</div>'
-        '</div>'
-        '</td>'
-        '</tr>'
-        '</table>'
-    )
-
 
 # ---------------------------------------------------------------------------
 # Custom input widget
@@ -237,8 +71,13 @@ class MainWindow(QMainWindow):
         self._current_room: str | None       = None
         self._current_pm_target: str | None  = None
         self._joined_rooms: set[str]         = set()
-        self._room_logs: dict[str, list[str]] = {}
-        self._pm_logs: dict[str, list[str]]   = {}
+        
+        # New QScrollArea-based storage
+        self._room_scrolls: dict[str, QScrollArea] = {}
+        self._room_layouts: dict[str, QVBoxLayout] = {}
+        self._pm_scrolls: dict[str, QScrollArea]   = {}
+        self._pm_layouts: dict[str, QVBoxLayout]   = {}
+        
         self._room_meta: dict[str, dict]      = {}
         self._friend_data: list[dict]         = []
         self._logged_out = False
@@ -265,7 +104,6 @@ class MainWindow(QMainWindow):
 
         root.addWidget(self._build_title_bar())
         root.addWidget(self._build_body(), stretch=1)
-        root.addWidget(self._build_input_bar())
 
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
@@ -350,14 +188,16 @@ class MainWindow(QMainWindow):
         # Centre panel — chat area
         chat_frame = QFrame()
         chat_frame.setObjectName("chat_frame")
+        chat_frame.setMinimumWidth(350)
         cv = QVBoxLayout(chat_frame)
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(0)
 
-        chat_header_bar = QFrame()
-        chat_header_bar.setObjectName("chat_header_bar")
-        chat_header_bar.setFixedHeight(42)
-        chh = QHBoxLayout(chat_header_bar)
+        self._chat_header_bar = QFrame()
+        self._chat_header_bar.setObjectName("chat_header_bar")
+        self._chat_header_bar.setFixedHeight(48)
+        self._chat_header_bar.setStyleSheet("background-color: #1E293B; border-bottom: 1px solid #475569;")
+        chh = QHBoxLayout(self._chat_header_bar)
         chh.setContentsMargins(14, 0, 14, 0)
         chh.setSpacing(10)
 
@@ -372,13 +212,21 @@ class MainWindow(QMainWindow):
         self._leave_btn.clicked.connect(self._on_leave_room)
         chh.addWidget(self._leave_btn)
 
-        cv.addWidget(chat_header_bar)
+        cv.addWidget(self._chat_header_bar)
+        self._chat_header_bar.hide()
 
-        self._chat_area = QTextBrowser()
-        self._chat_area.setObjectName("chat_area")
-        self._chat_area.setOpenLinks(False)
-        self._chat_area.setReadOnly(True)
-        cv.addWidget(self._chat_area, stretch=1)
+        self._chat_stack = QStackedWidget()
+        cv.addWidget(self._chat_stack, stretch=1)
+        
+        # Default empty page
+        empty_page = QWidget()
+        empty_page.setStyleSheet("background-color: transparent;")
+        self._chat_stack.addWidget(empty_page)
+        self._chat_stack.setCurrentWidget(empty_page)
+
+        self._input_bar = self._build_input_bar()
+        cv.addWidget(self._input_bar)
+        self._input_bar.hide()
 
         # Right panel — friends list
         right = QFrame()
@@ -423,23 +271,12 @@ class MainWindow(QMainWindow):
 
     def _build_input_bar(self) -> QFrame:
         bar = QFrame()
-        bar.setObjectName("input_bar")
-        bar.setFixedHeight(66)
+        bar.setObjectName("chat_input_bar")
+        bar.setFixedHeight(80)
+        bar.setStyleSheet("background-color: #1E293B; border-top: 1px solid #475569;")
         h = QHBoxLayout(bar)
-        h.setContentsMargins(12, 10, 12, 10)
-        h.setSpacing(8)
-
-        file_btn = QPushButton("📎")
-        file_btn.setObjectName("icon_btn")
-        file_btn.setToolTip("File Transfer — Coming Soon")
-        file_btn.setEnabled(False)
-        h.addWidget(file_btn)
-
-        voice_btn = QPushButton("🎤")
-        voice_btn.setObjectName("icon_btn")
-        voice_btn.setToolTip("Voice Chat — Coming Soon")
-        voice_btn.setEnabled(False)
-        h.addWidget(voice_btn)
+        h.setContentsMargins(16, 12, 16, 12)
+        h.setSpacing(12)
 
         self._msg_input = _MsgInput(on_send_callback=self._on_send)
         h.addWidget(self._msg_input, stretch=1)
@@ -514,53 +351,117 @@ class MainWindow(QMainWindow):
                 self._room_name_label.setText("Select a room →")
                 self._leave_btn.setText("Close Chat")
                 self._refresh_room_list_ui()
+                self._chat_header_bar.hide()
+                self._input_bar.hide()
             return
 
         if ptype == "broadcast":
-            room      = packet.get("room", "")
-            sender    = packet.get("sender", "?")
-            message   = packet.get("message", "")
-            timestamp = packet.get("timestamp", "")
-            html      = _html_broadcast(sender, message, timestamp, sender == self._username)
-            self._store_and_show(room, html)
+            room = packet.get("room") or packet.get("room_name")
+            if not room: return
+            
+            data = {
+                "type": "broadcast",
+                "sender": packet.get("sender", "?"),
+                "message": packet.get("message", ""),
+                "timestamp": packet.get("timestamp", ""),
+                "is_own": packet.get("sender", "") == self._username
+            }
+            self._add_chat_bubble(room, False, data)
             return
 
         if ptype == "private_message":
-            sender    = packet.get("sender", "?")
-            message   = packet.get("message", "")
-            timestamp = packet.get("timestamp", "")
-            html      = _html_private(sender, message, timestamp)
-            self._store_pm(sender, html)
-            if sender != self._current_pm_target:
-                self._status_bar.showMessage(f"📩 New PM from {sender}", 5000)
-                self._mark_user_unread(sender)
+            sender = packet.get("sender")
+            msg    = packet.get("message", "")
+            ts     = packet.get("timestamp", "")
+            if not sender: return
+            
+            data = {
+                "type": "pm",
+                "sender": sender,
+                "message": msg,
+                "timestamp": ts,
+                "is_own": False,
+                "is_pm": True
+            }
+            self._add_chat_bubble(sender, True, data)
             return
 
         if ptype == "notification":
             room    = packet.get("room", "")
             message = packet.get("message", "")
-            self._store_and_show(room, _html_notification(message))
+            if room:
+                self._add_chat_bubble(room, False, {"type": "notification", "message": message})
             return
 
         if ptype == "history":
             messages = packet.get("messages", [])
-            if not messages:
-                return
-            room     = self._current_room or ""
-            sep      = _html_history_separator(room)
-            existing = self._room_logs.get(room, [])
-            history_htmls = [
-                _html_broadcast(
-                    m.get("sender", "?"),
-                    m.get("message", ""),
-                    m.get("timestamp", ""),
-                    m.get("sender", "") == self._username,
-                )
-                for m in messages
-            ]
-            # Prepend history before any live messages already buffered.
-            self._room_logs[room] = [sep] + history_htmls + existing
-            self._reload_chat()
+            room     = self._current_room or packet.get("room", "")
+            if not room: return
+            
+            scroll, layout = self._get_or_create_chat(room, False)
+            
+            # Clear existing widgets (except the stretch at the end)
+            while layout.count() > 1:
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            last_date = ""
+            for m in messages:
+                ts = m.get("timestamp", "")
+                date_str = ts.split(" ")[0] if ts else "History"
+                if date_str != last_date:
+                    layout.insertWidget(layout.count() - 1, self._create_bubble_widget({"type": "date_separator", "date": date_str}))
+                    last_date = date_str
+                    
+                data = {
+                    "type": "broadcast",
+                    "sender": m.get("sender", "?"),
+                    "message": m.get("message", ""),
+                    "timestamp": ts,
+                    "is_own": m.get("sender", "") == self._username
+                }
+                layout.insertWidget(layout.count() - 1, self._create_bubble_widget(data))
+                
+            if room == self._current_room:
+                self._chat_stack.setCurrentWidget(scroll)
+                QTimer.singleShot(30, lambda: scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum()))
+            return
+
+        if ptype == "pm_history":
+            messages = packet.get("messages", [])
+            target   = packet.get("target", "")
+            if not target: return
+            
+            scroll, layout = self._get_or_create_chat(target, True)
+            
+            # Clear existing widgets (except the stretch at the end)
+            while layout.count() > 1:
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            last_date = ""
+            for m in messages:
+                ts = m.get("timestamp", "")
+                date_str = ts.split(" ")[0] if ts else "History"
+                if date_str != last_date:
+                    layout.insertWidget(layout.count() - 1, self._create_bubble_widget({"type": "date_separator", "date": date_str}))
+                    last_date = date_str
+                    
+                data = {
+                    "type": "pm",
+                    "sender": m.get("sender", "?"),
+                    "message": m.get("message", ""),
+                    "timestamp": ts,
+                    "is_own": m.get("sender", "") == self._username,
+                    "is_pm": True
+                }
+                layout.insertWidget(layout.count() - 1, self._create_bubble_widget(data))
+                
+            if target == self._current_pm_target:
+                self._chat_stack.setCurrentWidget(scroll)
+                QTimer.singleShot(30, lambda: scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum()))
             return
 
         if ptype == "room_list":
@@ -585,47 +486,125 @@ class MainWindow(QMainWindow):
         # ptype == "user_list" is legacy; the friend_list packet supersedes it.
 
     # ------------------------------------------------------------------
-    # Chat rendering
+    # Chat rendering (QScrollArea + QWidget)
     # ------------------------------------------------------------------
 
-    def _append_to_chat(self, html: str) -> None:
-        room = self._current_room or ""
-        if room not in self._room_logs:
-            self._room_logs[room] = []
-        self._room_logs[room].append(html)
-        self._reload_chat()
+    def _get_or_create_chat(self, target: str, is_pm: bool):
+        scrolls = self._pm_scrolls if is_pm else self._room_scrolls
+        layouts = self._pm_layouts if is_pm else self._room_layouts
+        
+        if target in scrolls:
+            return scrolls[target], layouts[target]
+            
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+        
+        container = QWidget()
+        container.setStyleSheet("background-color: transparent;")
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addStretch() # Push everything to bottom
+        
+        scroll.setWidget(container)
+        scrolls[target] = scroll
+        layouts[target] = layout
+        
+        self._chat_stack.addWidget(scroll)
+        return scroll, layout
 
-    def _store_and_show(self, room: str, html: str) -> None:
-        if room not in self._room_logs:
-            self._room_logs[room] = []
-        self._room_logs[room].append(html)
+    def _add_chat_bubble(self, target: str, is_pm: bool, data: dict) -> None:
+        scroll, layout = self._get_or_create_chat(target, is_pm)
+        widget = self._create_bubble_widget(data)
+        layout.insertWidget(layout.count() - 1, widget)
+        
+        # Auto-scroll
+        if (is_pm and target == self._current_pm_target) or (not is_pm and target == self._current_room):
+            self._chat_stack.setCurrentWidget(scroll)
+            QTimer.singleShot(30, lambda: scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum()))
+        elif not is_pm:
+            self._mark_room_unread(target)
+        elif is_pm:
+            self._mark_user_unread(target)
 
-        if room == self._current_room:
-            self._reload_chat()
+    def _create_bubble_widget(self, p: dict) -> QWidget:
+        ptype = p.get("type")
+        msg = p.get("message", "")
+        ts = _fmt_ts(p.get("timestamp", ""))
+        
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(12, 4, 12, 4)
+        
+        if ptype == "system":
+            lbl = QLabel(msg)
+            lbl.setStyleSheet(f"color: {p.get('color', '#94A3B8')}; font-size: 13px; font-weight: 500;")
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            row.addWidget(lbl)
+            return container
+            
+        if ptype == "date_separator":
+            lbl = QLabel(f"●  {p.get('date')}  ●")
+            lbl.setStyleSheet("color: #64748B; font-size: 12px; font-weight: bold; background-color: #1E293B; border-radius: 12px; padding: 4px 12px;")
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            row.addWidget(lbl)
+            return container
+            
+        if ptype == "notification":
+            lbl = QLabel(msg)
+            lbl.setStyleSheet("color: #94A3B8; font-size: 12px; font-style: italic; background-color: #1E293B; border-radius: 12px; padding: 4px 12px;")
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            row.addWidget(lbl)
+            return container
+            
+        is_own = p.get("is_own", False)
+        sender = p.get("sender", "")
+        is_pm = p.get("is_pm", False)
+        
+        bubble = QFrame()
+        blayout = QVBoxLayout(bubble)
+        blayout.setContentsMargins(14, 10, 14, 8)
+        blayout.setSpacing(4)
+        
+        if not is_own and sender:
+            s_lbl = QLabel(sender + (" (private)" if is_pm else ""))
+            color = "#C4B5FD" if is_pm else "#6366F1"
+            s_lbl.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 12px;")
+            blayout.addWidget(s_lbl)
+            
+        msg_lbl = QLabel(msg.replace('&', '&&'))  # QLabel uses & for shortcuts, escape it
+        msg_lbl.setWordWrap(True)
+        msg_lbl.setStyleSheet("color: #F8FAFC; font-size: 14px; background-color: transparent;")
+        msg_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        blayout.addWidget(msg_lbl)
+        
+        ts_lbl = QLabel(ts)
+        color = "#C4B5FD" if is_pm else ("#A5B4FC" if is_own else "#94A3B8")
+        ts_lbl.setStyleSheet(f"color: {color}; font-size: 10px; background-color: transparent;")
+        ts_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
+        blayout.addWidget(ts_lbl)
+        
+        bubble.setObjectName("chat_bubble")
+        
+        if is_own:
+            bg = "#0369A1" if is_pm else "#4F46E5" # Sky Blue for PM own, Indigo for Room own
+            bubble.setStyleSheet(f"#chat_bubble {{ background-color: {bg}; border-radius: 16px; border-top-right-radius: 4px; }}")
+            row.addStretch(1)
+            row.addWidget(bubble)
+            row.addSpacing(20)
         else:
-            self._mark_room_unread(room)
-
-    def _reload_chat(self) -> None:
-        if self._current_pm_target:
-            parts = self._pm_logs.get(self._current_pm_target, [])
-        else:
-            parts = self._room_logs.get(self._current_room or "", [])
-
-        self._chat_area.setHtml(
-            f'<html><body style="'
-            f'background-color:#0d1117;'
-            f'margin:6px 4px;'
-            f'padding:0;'
-            f'font-family:Segoe UI,Arial,sans-serif;'
-            f'">'
-            f'{"".join(parts)}'
-            f'</body></html>'
-        )
-        QTimer.singleShot(30, self._scroll_to_bottom)
-
-    def _scroll_to_bottom(self) -> None:
-        sb = self._chat_area.verticalScrollBar()
-        sb.setValue(sb.maximum())
+            bg = "#0F766E" if is_pm else "#1E293B" # Teal for PM incoming, Slate for Room incoming
+            b_style = f"#chat_bubble {{ background-color: {bg}; border-radius: 16px; border-top-left-radius: 4px;"
+            if is_pm:
+                b_style += " border-left: 4px solid #2DD4BF;"
+            b_style += " }"
+            bubble.setStyleSheet(b_style)
+            row.addSpacing(20)
+            row.addWidget(bubble)
+            row.addStretch(1)
+            
+        return container
 
     # ------------------------------------------------------------------
     # Room list helpers
@@ -679,7 +658,7 @@ class MainWindow(QMainWindow):
         for f in friends:
             uname      = f["username"]
             online     = f["online"]
-            has_unread = uname in self._pm_logs and uname != self._current_pm_target
+            has_unread = uname in self._pm_layouts and self._pm_layouts[uname].count() > 1 and uname != self._current_pm_target
             if has_unread:
                 icon = "🔵"
             elif online:
@@ -707,13 +686,6 @@ class MainWindow(QMainWindow):
                 if "🔵" not in item.text():
                     item.setText(f"  🔵  {username}")
                 return
-
-    def _store_pm(self, contact: str, html: str) -> None:
-        if contact not in self._pm_logs:
-            self._pm_logs[contact] = []
-        self._pm_logs[contact].append(html)
-        if contact == self._current_pm_target:
-            self._reload_chat()
 
     # ------------------------------------------------------------------
     # Friend request notification bar
@@ -751,9 +723,17 @@ class MainWindow(QMainWindow):
         if self._current_pm_target:
             self._msg_input.clear()
             self._network.send_private_message(self._current_pm_target, text)
-            # Echo own PM locally; the server does not send it back.
-            ts   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            self._store_pm(self._current_pm_target, _html_pm_out(text, ts))
+            
+            # Local echo
+            data = {
+                "type": "pm",
+                "sender": self._username,
+                "message": text,
+                "timestamp": "now",  # server assigns actual, but local echo needs fake
+                "is_own": True,
+                "is_pm": True
+            }
+            self._add_chat_bubble(self._current_pm_target, True, data)
         elif self._current_room:
             self._msg_input.clear()
             self._network.send_broadcast(self._current_room, text)
@@ -793,13 +773,20 @@ class MainWindow(QMainWindow):
                 item.setText(f"  💬  {room}")  # clear unread badge
                 break
 
-        self._reload_chat()
+        
 
         if room not in self._joined_rooms:
             self._network.send_join_room(room, password)
             self._joined_rooms.add(room)
             self._refresh_room_list_ui()
 
+        if room in self._room_scrolls:
+            self._chat_stack.setCurrentWidget(self._room_scrolls[room])
+        else:
+            self._chat_stack.setCurrentIndex(0) # empty page
+
+        self._chat_header_bar.show()
+        self._input_bar.show()
         self._msg_input.setFocus()
 
     def _switch_to_pm(self, target: str) -> None:
@@ -819,7 +806,16 @@ class MainWindow(QMainWindow):
                 break
 
         self._leave_btn.setText("Close Chat")
-        self._reload_chat()
+        
+        self._network.send_get_pm_history(target)
+        
+        if target in self._pm_scrolls:
+            self._chat_stack.setCurrentWidget(self._pm_scrolls[target])
+        else:
+            self._chat_stack.setCurrentIndex(0) # empty page
+
+        self._chat_header_bar.show()
+        self._input_bar.show()
         self._msg_input.setFocus()
 
     def _on_create_room(self) -> None:
@@ -841,9 +837,11 @@ class MainWindow(QMainWindow):
         self._current_room      = None
         self._room_name_label.setText("Select a room →")
         self._leave_btn.setText("Close Chat")
-        self._chat_area.clear()
+        self._chat_stack.setCurrentIndex(0)
         self._user_list.clearSelection()
         self._room_list.clearSelection()
+        self._chat_header_bar.hide()
+        self._input_bar.hide()
 
     def _on_room_context_menu(self, pos) -> None:
         item = self._room_list.itemAt(pos)
@@ -893,7 +891,9 @@ class MainWindow(QMainWindow):
             self._current_room = None
             self._room_name_label.setText("Select a room →")
             self._leave_btn.setText("Close Chat")
-            self._chat_area.clear()
+            self._chat_stack.setCurrentIndex(0)
+            self._chat_header_bar.hide()
+            self._input_bar.hide()
         self._room_meta.pop(room, None)
         for i in range(self._room_list.count()):
             item = self._room_list.item(i)
@@ -906,10 +906,6 @@ class MainWindow(QMainWindow):
         target = item.data(Qt.ItemDataRole.UserRole)
         if not target or target == self._username:
             return
-        online = item.data(Qt.ItemDataRole.UserRole + 1)
-        if not online:
-            self._status_bar.showMessage(f"⚫  {target} is currently offline.", 3000)
-            return
         self._switch_to_pm(target)
 
     def _on_friend_context_menu(self, pos) -> None:
@@ -917,11 +913,9 @@ class MainWindow(QMainWindow):
         if not item:
             return
         target = item.data(Qt.ItemDataRole.UserRole)
-        online = item.data(Qt.ItemDataRole.UserRole + 1)
         menu   = QMenu(self)
-        if online:
-            pm_action = menu.addAction("✉️  Send PM")
-            pm_action.triggered.connect(lambda: self._switch_to_pm(target))
+        pm_action = menu.addAction("✉️  Send PM")
+        pm_action.triggered.connect(lambda: self._switch_to_pm(target))
         remove_action = menu.addAction("🔴  Unfriend")
         remove_action.triggered.connect(lambda: self._on_remove_friend(target))
         menu.exec(self._user_list.mapToGlobal(pos))
@@ -944,7 +938,9 @@ class MainWindow(QMainWindow):
                 self._current_pm_target = None
                 self._room_name_label.setText("Select a room →")
                 self._leave_btn.setText("Close Chat")
-                self._chat_area.clear()
+                self._chat_stack.setCurrentIndex(0)
+                self._chat_header_bar.hide()
+                self._input_bar.hide()
 
     def _on_refresh(self) -> None:
         self._network.send_get_rooms()
@@ -958,7 +954,8 @@ class MainWindow(QMainWindow):
         self.close()
 
     def _on_disconnected(self) -> None:
-        self._append_to_chat(_html_system("⚠  Disconnected from server.", RED))
+        if self._current_room:
+            self._add_chat_bubble(self._current_room, False, {"type": "system", "message": "⚠  Disconnected from server.", "color": RED})
         self._status_bar.showMessage("Disconnected from server.")
 
     # ------------------------------------------------------------------

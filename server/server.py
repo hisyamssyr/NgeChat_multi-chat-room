@@ -112,6 +112,7 @@ class ClientHandler:
             "accept_friend":   self._handle_accept_friend,
             "decline_friend":  self._handle_decline_friend,
             "get_pending_requests": self._handle_get_pending_requests,
+            "get_pm_history":  self._handle_get_pm_history,
         }
         handler = dispatch.get(ptype)
         if handler:
@@ -339,21 +340,35 @@ class ClientHandler:
         if not self._db.is_friend(self._username, target):
             self._send_err(f"'{target}' is not in your friends list. Add them as a friend first.")
             return
-        if not self._rooms.is_online(target):
-            self._send_err(f"'{target}' is currently offline.")
-            return
 
         from datetime import datetime, timezone
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        self._db.save_private_message(self._username, target, message, timestamp)
 
         push      = make_private_push(self._username, message, timestamp)
         delivered = self._rooms.send_to_user(target, push)
 
         if delivered:
-            self._send_ok(f"Private message sent to '{target}'.")
-            logger.info("PM: '%s' → '%s': %s", self._username, target, message[:60])
+            logger.info("PM delivered from '%s' to '%s'.", self._username, target)
         else:
-            self._send_err(f"Failed to deliver message to '{target}'.")
+            logger.info("PM from '%s' to '%s' saved (user offline).", self._username, target)
+
+    def _handle_get_pm_history(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+        
+        target = packet.get("target", "").strip()
+        if not target:
+            return
+            
+        history = self._db.get_private_history(self._username, target)
+        
+        send_packet(self._sock, {
+            "type": "pm_history",
+            "target": target,
+            "messages": history
+        })
 
     def _handle_get_rooms(self, packet: dict) -> None:
         if not self._require_login():

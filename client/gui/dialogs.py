@@ -81,7 +81,7 @@ class CreateRoomDialog(_BaseDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #30363d;")
+        line.setStyleSheet("color: #475569;")
         self._layout.addWidget(line)
 
         self._layout.addWidget(self._field_label("Room Name"))
@@ -141,7 +141,7 @@ class PrivateMsgDialog(_BaseDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #30363d;")
+        line.setStyleSheet("color: #475569;")
         self._layout.addWidget(line)
 
         # Target input
@@ -151,7 +151,7 @@ class PrivateMsgDialog(_BaseDialog):
         if self._prefill:
             self._target_input.setText(self._prefill)
             self._target_input.setReadOnly(True)
-            self._target_input.setStyleSheet("color: #58a6ff;")
+            self._target_input.setStyleSheet("color: #6366F1;")
         self._layout.addWidget(self._target_input)
 
         # Message input
@@ -218,7 +218,7 @@ class JoinPasswordDialog(_BaseDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #30363d;")
+        line.setStyleSheet("color: #475569;")
         self._layout.addWidget(line)
 
         self._layout.addWidget(self._field_label("Invite Code (8 characters)"))
@@ -298,7 +298,7 @@ class RoomCodeDialog(_BaseDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #30363d;")
+        line.setStyleSheet("color: #475569;")
         self._layout.addWidget(line)
 
         self._layout.addWidget(self._field_label("Invite Code"))
@@ -309,8 +309,8 @@ class RoomCodeDialog(_BaseDialog):
         self._code_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._code_display.setStyleSheet(
             "font-size: 22px; font-weight: bold; font-family: monospace;"
-            "letter-spacing: 4px; color: #58a6ff; background: #161b22;"
-            "border: 1px solid #30363d; border-radius: 6px; padding: 8px;"
+            "letter-spacing: 4px; color: #6366F1; background: #1E293B;"
+            "border: 1px solid #475569; border-radius: 8px; padding: 12px;"
         )
         code_row.addWidget(self._code_display)
 
@@ -364,7 +364,7 @@ class AddFriendDialog(_BaseDialog):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #30363d;")
+        line.setStyleSheet("color: #475569;")
         self._layout.addWidget(line)
 
         self._layout.addWidget(self._field_label("Username"))
