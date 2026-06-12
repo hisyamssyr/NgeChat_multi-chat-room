@@ -322,7 +322,10 @@ class MainWindow(QMainWindow):
         if status == "error":
             msg = packet.get("message", "Error")
             self._status_bar.showMessage(f"✗  {msg}", 5000)
-            self._append_to_chat(_html_system(f"✗  {msg}", RED))
+            if self._current_room:
+                self._add_chat_bubble(
+                    self._current_room, False, {"type": "system", "message": f"✗  {msg}", "color": "#EF4444"}
+                )
             if msg == "Wrong invite code." and self._current_room:
                 self._joined_rooms.discard(self._current_room)
                 self._current_room = None

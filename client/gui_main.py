@@ -50,6 +50,7 @@ def main() -> None:
     login_win._host_input.setText(args.host)
     login_win._port_input.setText(str(args.port))
 
+    login_win.showMaximized()
     result = login_win.exec()
 
     if result != QDialog.DialogCode.Accepted:
@@ -59,7 +60,7 @@ def main() -> None:
     username = login_win.username
 
     main_win = MainWindow(network=network, username=username)
-    main_win.show()
+    main_win.showMaximized()
 
     sys.exit(app.exec())
 

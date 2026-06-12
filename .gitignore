@@ -1,1 +1,9 @@
-# 
+certs/
+
+server/__pycache__/
+client/__pycache__/
+client/gui/__pycache__/
+
+database/
+logs/
+.venv/

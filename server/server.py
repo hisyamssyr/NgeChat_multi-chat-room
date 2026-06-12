@@ -138,6 +138,7 @@ class ClientHandler:
     # Handlers
     # ------------------------------------------------------------------
 
+    def _handle_register(self, packet: dict) -> None:
         from server.protocol import send_packet
 
         username = packet["username"].strip()
