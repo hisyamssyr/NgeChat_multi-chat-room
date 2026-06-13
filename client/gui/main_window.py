@@ -380,7 +380,7 @@ class MainWindow(QMainWindow):
 
         if ptype == "history":
             messages = packet.get("messages", [])
-            room = self._current_room or packet.get("room", "")
+            room = packet.get("room", "") or self._current_room
             if not room:
                 return
 

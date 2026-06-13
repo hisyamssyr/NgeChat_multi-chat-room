@@ -225,7 +225,7 @@ class ClientHandler:
         self._send_ok(f"Joined room '{room_name}'.")
 
         if history:
-            send_packet(self._sock, make_history_packet(history))
+            send_packet(self._sock, make_history_packet(room_name, history))
 
         if newly_joined:
             notif = make_notification_push(
@@ -267,7 +267,7 @@ class ClientHandler:
         )
 
         if history:
-            send_packet(self._sock, make_history_packet(history))
+            send_packet(self._sock, make_history_packet(room_name, history))
 
         if newly_joined:
             notif = make_notification_push(

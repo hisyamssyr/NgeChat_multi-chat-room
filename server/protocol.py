@@ -120,8 +120,8 @@ def make_notification_push(room: str, message: str) -> dict:
     return {"type": "notification", "room": room, "message": message}
 
 
-def make_history_packet(messages: list[dict]) -> dict:
-    return {"type": "history", "messages": messages}
+def make_history_packet(room: str, messages: list[dict]) -> dict:
+    return {"type": "history", "room": room, "messages": messages}
 
 
 def make_room_list_packet(rooms: list[dict]) -> dict:
