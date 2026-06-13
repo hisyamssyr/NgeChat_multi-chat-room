@@ -256,7 +256,7 @@ class MainWindow(QMainWindow):
         chh.addWidget(self._room_name_label)
         chh.addStretch()
 
-        self._leave_btn = QPushButton("Leave Room")
+        self._leave_btn = QPushButton("Close Chat")
         self._leave_btn.setObjectName("danger_btn")
         self._leave_btn.setFixedHeight(28)
         self._leave_btn.clicked.connect(self._on_leave_room)
@@ -270,6 +270,15 @@ class MainWindow(QMainWindow):
 
         empty_page = QWidget()
         empty_page.setStyleSheet("background-color: transparent;")
+        empty_layout = QVBoxLayout(empty_page)
+        empty_layout.addStretch()
+        empty_hint = QLabel("Select a room or friend to start chatting")
+        empty_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_hint.setStyleSheet(
+            "color: #475569; font-size: 16px; font-weight: 600; background: transparent;"
+        )
+        empty_layout.addWidget(empty_hint, alignment=Qt.AlignmentFlag.AlignCenter)
+        empty_layout.addStretch()
         self._chat_stack.addWidget(empty_page)
         self._chat_stack.setCurrentWidget(empty_page)
 
@@ -1463,93 +1472,7 @@ class MainWindow(QMainWindow):
         label.setText("  ".join(parts))
         label.show()
 
-    def _populate_room_list(self, rooms: list[dict]) -> None:
-        self._room_list.clear()
-        for r in rooms:
-            name = r.get("room_name", "")
-            self._room_meta[name] = r
-            is_locked = not r.get("is_member") and name not in self._joined_rooms
-            lock_suffix = "  🔒" if is_locked else ""
-            item = QListWidgetItem(f"  💬  {name}{lock_suffix}")
-            item.setData(Qt.ItemDataRole.UserRole, name)
-            self._room_list.addItem(item)
-        self._highlight_current_room()
 
-    def _refresh_room_list_ui(self) -> None:
-        for i in range(self._room_list.count()):
-            item = self._room_list.item(i)
-            name = item.data(Qt.ItemDataRole.UserRole)
-            meta = self._room_meta.get(name, {})
-            if "🔵💬" in item.text():
-                continue
-            is_locked = not meta.get("is_member") and name not in self._joined_rooms
-            lock_suffix = "  🔒" if is_locked else ""
-            item.setText(f"  💬  {name}{lock_suffix}")
-        self._highlight_current_room()
-
-    def _highlight_current_room(self) -> None:
-        for i in range(self._room_list.count()):
-            item = self._room_list.item(i)
-            if item.data(Qt.ItemDataRole.UserRole) == self._current_room:
-                self._room_list.setCurrentItem(item)
-                return
-
-    def _mark_room_unread(self, room: str) -> None:
-        for i in range(self._room_list.count()):
-            item = self._room_list.item(i)
-            if item.data(Qt.ItemDataRole.UserRole) == room:
-                if "🔵" not in item.text():
-                    item.setText(f"  🔵💬  {room}")
-                return
-
-    def _populate_online_list(self, users: list[str]) -> None:
-        self._online_users = sorted(users)
-        self._online_list.clear()
-        for uname in self._online_users:
-            label = f"  🟢  {uname}"
-            if uname == self._username:
-                label += " (you)"
-            item = QListWidgetItem(label)
-            item.setData(Qt.ItemDataRole.UserRole, uname)
-            self._online_list.addItem(item)
-
-    def _populate_friend_list(self, friends: list[dict]) -> None:
-        self._user_list.clear()
-        for f in friends:
-            uname = f["username"]
-            online = f["online"]
-            has_unread = (
-                uname in self._pm_layouts
-                and self._pm_layouts[uname].count() > 1
-                and uname != self._current_pm_target
-            )
-            if has_unread:
-                icon = "🔵"
-            elif online:
-                icon = "🟢"
-            else:
-                icon = "⚫"
-            item = QListWidgetItem(f"  {icon}  {uname}")
-            item.setData(Qt.ItemDataRole.UserRole, uname)
-            item.setData(Qt.ItemDataRole.UserRole + 1, online)
-            self._user_list.addItem(item)
-        if self._current_pm_target:
-            self._highlight_current_user(self._current_pm_target)
-
-    def _highlight_current_user(self, target: str) -> None:
-        for i in range(self._user_list.count()):
-            item = self._user_list.item(i)
-            if item.data(Qt.ItemDataRole.UserRole) == target:
-                self._user_list.setCurrentItem(item)
-                return
-
-    def _mark_user_unread(self, username: str) -> None:
-        for i in range(self._user_list.count()):
-            item = self._user_list.item(i)
-            if item.data(Qt.ItemDataRole.UserRole) == username:
-                if "🔵" not in item.text():
-                    item.setText(f"  🔵  {username}")
-                return
 
     def _show_friend_request_notif(self, from_user: str) -> None:
         self._pending_req_btn.setText("📩 Friend Requests (New)")
@@ -1592,7 +1515,7 @@ class MainWindow(QMainWindow):
         item.setData(LIST_DISPLAY_ROLE, text)
         row = QWidget()
         row.setStyleSheet("background: transparent;")
-        row.setFixedHeight(38)
+        row.setFixedHeight(42)
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(10, 0, 4, 0)
         row_layout.setSpacing(6)
@@ -1609,7 +1532,7 @@ class MainWindow(QMainWindow):
             "color: #CBD5E1; background: transparent; "
             "font-size: 14px; font-weight: 500;"
         )
-        row_layout.addWidget(label, stretch=1)
+        row_layout.addWidget(label, stretch=1, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         if show_menu:
             more_btn = QPushButton("...")
@@ -1638,7 +1561,7 @@ class MainWindow(QMainWindow):
                     selected_item, button
                 )
             )
-            row_layout.addWidget(more_btn)
+            row_layout.addWidget(more_btn, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         def activate(event, selected_item=item) -> None:
             if event.button() == Qt.MouseButton.LeftButton:
@@ -1797,6 +1720,20 @@ class MainWindow(QMainWindow):
             )
         if self._current_pm_target:
             self._highlight_current_user(self._current_pm_target)
+
+    def _highlight_current_room(self) -> None:
+        for i in range(self._room_list.count()):
+            item = self._room_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == self._current_room:
+                self._room_list.setCurrentItem(item)
+                return
+
+    def _highlight_current_user(self, target: str) -> None:
+        for i in range(self._user_list.count()):
+            item = self._user_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == target:
+                self._user_list.setCurrentItem(item)
+                return
 
     def _mark_user_unread(self, username: str) -> None:
         for i in range(self._user_list.count()):
@@ -2112,7 +2049,7 @@ class MainWindow(QMainWindow):
         self._current_pm_target = None
         self._current_room = room
         self._room_name_label.setText(f"#  {room}")
-        self._leave_btn.setText("Leave Room")
+        self._leave_btn.setText("Close Chat")
 
         self._highlight_current_room()
         for i in range(self._room_list.count()):
@@ -2179,18 +2116,6 @@ class MainWindow(QMainWindow):
                 self._network.send_join_by_code(code)
 
     def _on_leave_room(self) -> None:
-        if self._current_room:
-            room = self._current_room
-            ans = QMessageBox.question(
-                self,
-                "Leave Room",
-                f"Leave room '{room}'? You will need the invite code to join again.",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if ans == QMessageBox.StandardButton.Yes:
-                self._leave_room_action(room)
-            return
-
         self._current_pm_target = None
         self._current_room = None
         self._room_name_label.setText("Select a room →")
@@ -2201,6 +2126,7 @@ class MainWindow(QMainWindow):
         self._room_list.clearSelection()
         self._chat_header_bar.hide()
         self._input_bar.hide()
+
 
     def _on_room_context_menu(self, pos) -> None:
         item = self._room_list.itemAt(pos)

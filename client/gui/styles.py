@@ -364,7 +364,7 @@ QListWidget {{
 }}
 
 QListWidget::item {{
-    padding: 10px 14px;
+    padding: 0px 8px;
     border-radius: 8px;
     color: {TEXT_MUTED};
     margin: 2px 0px;
