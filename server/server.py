@@ -21,6 +21,7 @@ from server.protocol import (
     make_file_transfer_push,
     make_history_packet,
     make_notification_push,
+    make_pending_requests_list,
     make_private_push,
     make_reaction_push,
     make_response,
@@ -674,8 +675,6 @@ class ClientHandler:
         if not self._require_login():
             return
         requests = self._db.get_pending_received(self._username)
-        from .protocol import make_pending_requests_list
-
         self._send_packet(make_pending_requests_list(requests))
 
     def _handle_add_friend(self, packet: dict) -> None:
