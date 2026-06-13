@@ -58,8 +58,9 @@ def main() -> None:
 
     network = login_win.network_client
     username = login_win.username
+    password = login_win._password_input.text()
 
-    main_win = MainWindow(network=network, username=username)
+    main_win = MainWindow(network=network, username=username, password=password)
     main_win.showMaximized()
 
     sys.exit(app.exec())

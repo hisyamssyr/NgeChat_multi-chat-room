@@ -63,10 +63,11 @@ class _MsgInput(QTextEdit):
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, network: NetworkClient, username: str) -> None:
+    def __init__(self, network: NetworkClient, username: str, password: str = "") -> None:
         super().__init__()
         self._network = network
         self._username = username
+        self._password = password
         self._current_room: str | None = None
         self._current_pm_target: str | None = None
         self._joined_rooms: set[str] = set()
@@ -964,6 +965,21 @@ class MainWindow(QMainWindow):
                 self._input_bar.hide()
 
     def _on_refresh(self) -> None:
+        if not self._network.is_connected:
+            self._status_bar.showMessage("Reconnecting...", 2000)
+            ok, err = self._network.connect_to_server()
+            if not ok:
+                self._status_bar.showMessage(f"Reconnection failed: {err}", 5000)
+                return
+            
+            self._network.send_login(self._username, self._password)
+            
+            for room in list(self._joined_rooms):
+                self._network.send_join_room(room)
+                
+            if self._current_pm_target:
+                self._network.send_get_pm_history(self._current_pm_target)
+
         self._network.send_get_rooms()
         self._network.send_get_friends()
         self._status_bar.showMessage("Refreshed.", 2000)
