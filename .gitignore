@@ -1,9 +1,13 @@
 certs/
 
+__pycache__/
 server/__pycache__/
 client/__pycache__/
 client/gui/__pycache__/
 
 database/
 logs/
+uploads/
+downloads/
+load_test_result_*.txt
 .venv/

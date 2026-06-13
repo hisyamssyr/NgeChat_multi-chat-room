@@ -34,6 +34,8 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "decline_friend": ["target"],
     "get_pending_requests": [],
     "get_pm_history": ["target"],
+    "file_transfer": ["scope", "filename", "data"],
+    "reaction": ["scope", "message_id", "emoji"],
 }
 
 
@@ -97,22 +99,39 @@ def make_response(status: str, message: str, **extra: Any) -> dict:
     return {"status": status, "message": message, **extra}
 
 
-def make_broadcast_push(room: str, sender: str, message: str, timestamp: str) -> dict:
-    return {
+def make_broadcast_push(
+    room: str,
+    sender: str,
+    message: str,
+    timestamp: str,
+    message_id: str | None = None,
+) -> dict:
+    packet = {
         "type": "broadcast",
         "room": room,
         "sender": sender,
         "message": message,
         "timestamp": timestamp,
     }
+    if message_id:
+        packet["message_id"] = message_id
+    return packet
 
 
-def make_private_push(sender: str, message: str, timestamp: str) -> dict:
+def make_private_push(
+    sender: str,
+    target: str,
+    message: str,
+    timestamp: str,
+    message_id: str,
+) -> dict:
     return {
         "type": "private_message",
         "sender": sender,
+        "target": target,
         "message": message,
         "timestamp": timestamp,
+        "message_id": message_id,
     }
 
 
@@ -142,6 +161,67 @@ def make_friend_request_push(from_user: str) -> dict:
 
 def make_pending_requests_list(requests: list[str]) -> dict:
     return {"type": "pending_requests_list", "requests": requests}
+
+
+def make_file_transfer_push(
+    *,
+    scope: str,
+    sender: str,
+    filename: str,
+    data: str,
+    timestamp: str,
+    size: int,
+    kind: str = "file",
+    message_id: str | None = None,
+    room: str | None = None,
+    target: str | None = None,
+) -> dict:
+    packet = {
+        "type": "file_transfer",
+        "scope": scope,
+        "sender": sender,
+        "filename": filename,
+        "data": data,
+        "timestamp": timestamp,
+        "size": size,
+        "kind": kind,
+    }
+    if message_id:
+        packet["message_id"] = message_id
+    if room:
+        packet["room"] = room
+    if target:
+        packet["target"] = target
+    return packet
+
+
+def make_reaction_push(
+    *,
+    scope: str,
+    sender: str,
+    message_id: str,
+    emoji: str,
+    timestamp: str,
+    action: str = "set",
+    reactions: list[dict] | None = None,
+    room: str | None = None,
+    target: str | None = None,
+) -> dict:
+    packet = {
+        "type": "reaction",
+        "scope": scope,
+        "sender": sender,
+        "message_id": message_id,
+        "emoji": emoji,
+        "action": action,
+        "timestamp": timestamp,
+        "reactions": reactions or [],
+    }
+    if room:
+        packet["room"] = room
+    if target:
+        packet["target"] = target
+    return packet
 
 
 class PacketError(Exception):

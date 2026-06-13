@@ -57,7 +57,8 @@ QFrame#chat_header_bar {{
     border-bottom: 1px solid {BORDER};
 }}
 
-QFrame#input_bar {{
+QFrame#input_bar,
+QFrame#chat_input_bar {{
     background-color: {BG_DEEP};
     border-top: 1px solid {BORDER};
 }}
@@ -76,7 +77,7 @@ QLabel {{
 
 QLabel#app_title {{
     color: {TEXT};
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
     letter-spacing: 0.5px;
 }}
@@ -149,6 +150,7 @@ QPushButton {{
     padding: 8px 16px;
     font-weight: 600;
     min-height: 32px;
+    text-align: center;
 }}
 
 QPushButton:hover {{
@@ -160,8 +162,8 @@ QPushButton:pressed {{
 }}
 
 QPushButton#send_btn {{
-    background-color: {BLUE};
-    color: #ffffff;
+    background-color: #22C55E;
+    color: #052E16;
     border: none;
     border-radius: 8px;
     padding: 8px 24px;
@@ -171,11 +173,59 @@ QPushButton#send_btn {{
 }}
 
 QPushButton#send_btn:hover {{
-    background-color: #4F46E5; /* indigo-600 */
+    background-color: #34D399;
 }}
 
 QPushButton#send_btn:pressed {{
-    background-color: #4338CA; /* indigo-700 */
+    background-color: #16A34A;
+}}
+
+QPushButton#chat_send_btn {{
+    background-color: #FBBF24;
+    color: #111827;
+    border: 1px solid #FDE68A;
+    border-radius: 9px;
+    padding: 0px;
+    font-weight: 800;
+    font-size: 14px;
+    min-width: 88px;
+    min-height: 34px;
+    text-align: center;
+}}
+
+QPushButton#chat_send_btn:hover {{
+    background-color: #F59E0B;
+    color: #111827;
+    border-color: #FCD34D;
+}}
+
+QPushButton#chat_send_btn:pressed {{
+    background-color: #D97706;
+    color: #0F172A;
+}}
+
+QPushButton#input_action_btn {{
+    background-color: transparent;
+    color: {BLUE};
+    border: 1px solid {BORDER};
+    border-radius: 9px;
+    padding: 0px;
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 34px;
+    text-align: center;
+}}
+
+QPushButton#input_action_btn:hover {{
+    background-color: {BG_ELEVATED};
+    border-color: {BLUE};
+    color: #A5B4FC;
+}}
+
+QPushButton#input_action_btn:pressed {{
+    background-color: #312E81;
+    border-color: #A5B4FC;
+    color: {TEXT};
 }}
 
 QPushButton#login_btn {{
@@ -226,7 +276,7 @@ QPushButton#accent_btn {{
     color: {BLUE};
     border: 1px solid {BORDER};
     border-radius: 8px;
-    padding: 8px 16px;
+    padding: 7px 12px;
     font-weight: 600;
 }}
 

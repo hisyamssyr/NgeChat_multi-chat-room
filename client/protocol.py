@@ -108,6 +108,52 @@ def build_private_message(target: str, message: str) -> dict:
     return {"type": "private_message", "target": target, "message": message}
 
 
+def build_file_transfer(
+    *,
+    scope: str,
+    filename: str,
+    data: str,
+    room: str = "",
+    target: str = "",
+    kind: str = "file",
+) -> dict:
+    packet = {
+        "type": "file_transfer",
+        "scope": scope,
+        "filename": filename,
+        "data": data,
+        "kind": kind,
+    }
+    if room:
+        packet["room"] = room
+    if target:
+        packet["target"] = target
+    return packet
+
+
+def build_reaction(
+    *,
+    scope: str,
+    message_id: str,
+    emoji: str,
+    action: str = "set",
+    room: str = "",
+    target: str = "",
+) -> dict:
+    packet = {
+        "type": "reaction",
+        "scope": scope,
+        "message_id": message_id,
+        "emoji": emoji,
+        "action": action,
+    }
+    if room:
+        packet["room"] = room
+    if target:
+        packet["target"] = target
+    return packet
+
+
 def build_get_rooms() -> dict:
     return {"type": "get_rooms"}
 

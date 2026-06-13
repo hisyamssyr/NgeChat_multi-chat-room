@@ -19,6 +19,7 @@ from client.protocol import (
     build_create_room,
     build_decline_friend,
     build_delete_room,
+    build_file_transfer,
     build_get_friends,
     build_get_rooms,
     build_get_users,
@@ -28,6 +29,7 @@ from client.protocol import (
     build_login,
     build_logout,
     build_private_message,
+    build_reaction,
     build_register,
     build_remove_friend,
     recv_packet,
@@ -147,6 +149,48 @@ class NetworkClient(QObject):
 
     def send_private_message(self, target: str, message: str) -> bool:
         return self.send(build_private_message(target, message))
+
+    def send_file_transfer(
+        self,
+        *,
+        scope: str,
+        filename: str,
+        data: str,
+        room: str = "",
+        target: str = "",
+        kind: str = "file",
+    ) -> bool:
+        return self.send(
+            build_file_transfer(
+                scope=scope,
+                filename=filename,
+                data=data,
+                room=room,
+                target=target,
+                kind=kind,
+            )
+        )
+
+    def send_reaction(
+        self,
+        *,
+        scope: str,
+        message_id: str,
+        emoji: str,
+        action: str = "set",
+        room: str = "",
+        target: str = "",
+    ) -> bool:
+        return self.send(
+            build_reaction(
+                scope=scope,
+                message_id=message_id,
+                emoji=emoji,
+                action=action,
+                room=room,
+                target=target,
+            )
+        )
 
     def send_get_rooms(self) -> bool:
         return self.send(build_get_rooms())

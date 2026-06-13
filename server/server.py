@@ -1,9 +1,13 @@
 import logging
 import os
+import base64
+import binascii
+import secrets
 import socket
 import ssl
 import sys
 import threading
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -14,9 +18,11 @@ from server.protocol import (
     make_broadcast_push,
     make_friend_list_packet,
     make_friend_request_push,
+    make_file_transfer_push,
     make_history_packet,
     make_notification_push,
     make_private_push,
+    make_reaction_push,
     make_response,
     make_room_list_packet,
     make_user_list_packet,
@@ -29,8 +35,36 @@ from server.room_manager import RoomManager
 HOST = os.environ.get("CHAT_HOST", "0.0.0.0")
 PORT = int(os.environ.get("CHAT_PORT", "9090"))
 BACKLOG = 10
+MAX_TRANSFER_BYTES = 5 * 1024 * 1024
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_filename(filename: str) -> str:
+    name = os.path.basename(filename).strip().replace("\x00", "")
+    cleaned = []
+    for ch in name:
+        if ch.isalnum() or ch in (" ", ".", "_", "-"):
+            cleaned.append(ch)
+        else:
+            cleaned.append("_")
+    safe = "".join(cleaned).strip(" .")
+    return safe[:120] or "attachment.bin"
+
+
+def _store_transfer(sender: str, filename: str, raw: bytes) -> str:
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    upload_dir = os.path.join(base_dir, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    token = secrets.token_hex(4)
+    safe_sender = _safe_filename(sender)
+    safe_name = _safe_filename(filename)
+    path = os.path.join(upload_dir, f"{stamp}_{safe_sender}_{token}_{safe_name}")
+    with open(path, "wb") as f:
+        f.write(raw)
+    return path
 
 
 class ClientHandler:
@@ -49,6 +83,7 @@ class ClientHandler:
         self._rooms = rooms
         self._username: str | None = None
         self._running = True
+        self._send_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Main loop
@@ -65,8 +100,8 @@ class ClientHandler:
                     break
 
                 if not packet:
-                    send_packet(
-                        self._sock, make_response("error", "Empty or malformed packet.")
+                    self._send_packet(
+                        make_response("error", "Empty or malformed packet.")
                     )
                     continue
 
@@ -87,7 +122,7 @@ class ClientHandler:
         try:
             ptype = validate_packet(packet)
         except PacketError as exc:
-            send_packet(self._sock, make_response("error", str(exc)))
+            self._send_packet(make_response("error", str(exc)))
             logger.warning("PacketError from %s:%d — %s", *self._addr, exc)
             return
 
@@ -111,6 +146,8 @@ class ClientHandler:
             "decline_friend": self._handle_decline_friend,
             "get_pending_requests": self._handle_get_pending_requests,
             "get_pm_history": self._handle_get_pm_history,
+            "file_transfer": self._handle_file_transfer,
+            "reaction": self._handle_reaction,
         }
         handler = dispatch.get(ptype)
         if handler:
@@ -122,17 +159,29 @@ class ClientHandler:
 
     def _require_login(self) -> bool:
         if self._username is None:
-            send_packet(
-                self._sock, make_response("error", "You must be logged in to do that.")
+            self._send_packet(
+                make_response("error", "You must be logged in to do that.")
             )
             return False
         return True
 
+    def _send_packet(self, packet: dict) -> bool:
+        with self._send_lock:
+            return send_packet(self._sock, packet)
+
     def _send_ok(self, message: str, **extra) -> None:
-        send_packet(self._sock, make_response("ok", message, **extra))
+        self._send_packet(make_response("ok", message, **extra))
 
     def _send_err(self, message: str) -> None:
-        send_packet(self._sock, make_response("error", message))
+        self._send_packet(make_response("error", message))
+
+    def _send_room_list_to(self, username: str) -> None:
+        rooms = self._db.get_all_rooms(username)
+        self._rooms.send_to_user(username, make_room_list_packet(rooms))
+
+    def _push_room_lists_to_all(self) -> None:
+        for username in self._rooms.get_online_users():
+            self._send_room_list_to(username)
 
     # ------------------------------------------------------------------
     # Handlers
@@ -168,10 +217,11 @@ class ClientHandler:
             return
 
         self._username = username
-        self._rooms.add_user(username, self._sock)
+        self._rooms.add_user(username, self._sock, self._send_lock)
         self._send_ok(msg)
         logger.info("User logged in: %s from %s:%d", username, *self._addr)
 
+        self._push_user_list_to_all()
         self._push_friend_status_to_friends(username)
 
     def _handle_logout(self, packet: dict) -> None:
@@ -188,8 +238,7 @@ class ClientHandler:
         room_name = packet["room"].strip()
         ok, msg, invite_code = self._db.create_room(room_name, self._username)
         if ok:
-            send_packet(
-                self._sock,
+            self._send_packet(
                 {
                     "status": "ok",
                     "message": msg,
@@ -197,6 +246,7 @@ class ClientHandler:
                     "room_name": room_name,
                 },
             )
+            self._push_room_lists_to_all()
         else:
             self._send_err(msg)
 
@@ -222,10 +272,10 @@ class ClientHandler:
 
         newly_joined = self._rooms.join_room(self._username, room_name)
         history = self._db.get_room_history(room_name)
-        self._send_ok(f"Joined room '{room_name}'.")
+        self._send_ok(f"Joined room '{room_name}'.", room_name=room_name)
 
         if history:
-            send_packet(self._sock, make_history_packet(room_name, history))
+            self._send_packet(make_history_packet(room_name, history))
 
         if newly_joined:
             notif = make_notification_push(
@@ -233,6 +283,7 @@ class ClientHandler:
             )
             self._rooms.broadcast_to_room(room_name, notif, exclude=self._username)
             logger.info("'%s' joined room '%s'.", self._username, room_name)
+        self._send_room_list_to(self._username)
 
     def _handle_join_by_code(self, packet: dict) -> None:
         if not self._require_login():
@@ -257,8 +308,7 @@ class ClientHandler:
         newly_joined = self._rooms.join_room(self._username, room_name)
         history = self._db.get_room_history(room_name)
 
-        send_packet(
-            self._sock,
+        self._send_packet(
             {
                 "status": "ok",
                 "message": f"Joined room '{room_name}'.",
@@ -267,13 +317,14 @@ class ClientHandler:
         )
 
         if history:
-            send_packet(self._sock, make_history_packet(room_name, history))
+            self._send_packet(make_history_packet(room_name, history))
 
         if newly_joined:
             notif = make_notification_push(
                 room_name, f"📥 {self._username} joined the room."
             )
             self._rooms.broadcast_to_room(room_name, notif, exclude=self._username)
+        self._send_room_list_to(self._username)
 
     def _handle_leave_room(self, packet: dict) -> None:
         if not self._require_login():
@@ -287,6 +338,7 @@ class ClientHandler:
         self._rooms.leave_room(self._username, room_name)
         self._db.remove_room_member(room_name, self._username)
         self._send_ok(f"Left room '{room_name}'.")
+        self._send_room_list_to(self._username)
 
         notif = make_notification_push(room_name, f"📤 {self._username} left the room.")
         self._rooms.broadcast_to_room(room_name, notif)
@@ -309,6 +361,7 @@ class ClientHandler:
         self._rooms.broadcast_to_room(room_name, notif)
         self._rooms.delete_room(room_name)
         self._send_ok(msg)
+        self._push_room_lists_to_all()
 
     def _handle_broadcast(self, packet: dict) -> None:
         if not self._require_login():
@@ -325,13 +378,15 @@ class ClientHandler:
             self._send_err(f"You are not in room '{room_name}'. Join the room first.")
             return
 
-        from datetime import datetime, timezone
-
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-        self._db.save_message(room_name, self._username, message, timestamp)
-
-        push = make_broadcast_push(room_name, self._username, message, timestamp)
+        message_id = packet.get("message_id")
+        message_id = self._db.save_message(
+            room_name, self._username, message, timestamp, message_id=message_id
+        )
+        push = make_broadcast_push(
+            room_name, self._username, message, timestamp, message_id=message_id
+        )
         self._rooms.broadcast_to_room(room_name, push)
 
         logger.info(
@@ -351,20 +406,19 @@ class ClientHandler:
         if target == self._username:
             self._send_err("You cannot send a private message to yourself.")
             return
-        if not self._db.is_friend(self._username, target):
-            self._send_err(
-                f"'{target}' is not in your friends list. Add them as a friend first."
-            )
+        if not self._db.user_exists(target):
+            self._send_err(f"User '{target}' does not exist.")
             return
-
-        from datetime import datetime, timezone
 
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-        self._db.save_private_message(self._username, target, message, timestamp)
+        message_id = self._db.save_private_message(
+            self._username, target, message, timestamp
+        )
 
-        push = make_private_push(self._username, message, timestamp)
+        push = make_private_push(self._username, target, message, timestamp, message_id)
         delivered = self._rooms.send_to_user(target, push)
+        self._rooms.send_to_user(self._username, push)
 
         if delivered:
             logger.info("PM delivered from '%s' to '%s'.", self._username, target)
@@ -372,6 +426,218 @@ class ClientHandler:
             logger.info(
                 "PM from '%s' to '%s' saved (user offline).", self._username, target
             )
+
+    def _handle_file_transfer(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+
+        scope = packet.get("scope", "").strip().lower()
+        filename = _safe_filename(packet.get("filename", "attachment.bin"))
+        kind = packet.get("kind", "file").strip().lower()
+        if kind not in {"file", "voice"}:
+            kind = "file"
+
+        try:
+            raw = base64.b64decode(packet.get("data", ""), validate=True)
+        except (binascii.Error, ValueError):
+            self._send_err("File data is not valid base64.")
+            return
+
+        if not raw:
+            self._send_err("File cannot be empty.")
+            return
+        if len(raw) > MAX_TRANSFER_BYTES:
+            self._send_err("File is too large. Maximum size is 5 MB.")
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        encoded = base64.b64encode(raw).decode("ascii")
+        label = "Voice note" if kind == "voice" else "File"
+        message_text = f"[{label}] {filename}"
+
+        if scope == "room":
+            room_name = packet.get("room", "").strip()
+            if not room_name:
+                self._send_err("Room is required for room file transfer.")
+                return
+            if not self._rooms.is_in_room(self._username, room_name):
+                self._send_err(f"You are not in room '{room_name}'.")
+                return
+
+            stored_path = _store_transfer(self._username, filename, raw)
+            message_id = self._db.save_message(
+                room_name, self._username, message_text, timestamp
+            )
+            self._db.save_attachment(
+                message_id, filename, encoded, len(raw), kind, stored_path
+            )
+            push = make_file_transfer_push(
+                scope="room",
+                room=room_name,
+                sender=self._username,
+                filename=filename,
+                data=encoded,
+                timestamp=timestamp,
+                size=len(raw),
+                kind=kind,
+                message_id=message_id,
+            )
+            self._rooms.broadcast_to_room(room_name, push)
+            logger.info(
+                "%s transfer in '%s' by '%s': %s (%d bytes, stored=%s)",
+                label,
+                room_name,
+                self._username,
+                filename,
+                len(raw),
+                stored_path,
+            )
+            return
+
+        if scope == "private":
+            target = packet.get("target", "").strip()
+            if not target:
+                self._send_err("Target is required for private file transfer.")
+                return
+            if target == self._username:
+                self._send_err("You cannot send a file to yourself.")
+                return
+            if not self._db.user_exists(target):
+                self._send_err(f"User '{target}' does not exist.")
+                return
+
+            stored_path = _store_transfer(self._username, filename, raw)
+            message_id = self._db.save_private_message(
+                self._username, target, message_text, timestamp
+            )
+            self._db.save_attachment(
+                message_id, filename, encoded, len(raw), kind, stored_path
+            )
+            push = make_file_transfer_push(
+                scope="private",
+                target=target,
+                sender=self._username,
+                filename=filename,
+                data=encoded,
+                timestamp=timestamp,
+                size=len(raw),
+                kind=kind,
+                message_id=message_id,
+            )
+            delivered = self._rooms.send_to_user(target, push)
+            self._rooms.send_to_user(self._username, push)
+            logger.info(
+                "%s transfer from '%s' to '%s' (%s, %d bytes, delivered=%s, stored=%s)",
+                label,
+                self._username,
+                target,
+                filename,
+                len(raw),
+                delivered,
+                stored_path,
+            )
+            return
+
+        self._send_err("File transfer scope must be 'room' or 'private'.")
+
+    def _handle_reaction(self, packet: dict) -> None:
+        if not self._require_login():
+            return
+
+        scope = packet.get("scope", "").strip().lower()
+        message_id = packet.get("message_id", "").strip()
+        emoji = packet.get("emoji", "").strip()
+        action = packet.get("action", "set").strip().lower()
+        if not message_id:
+            self._send_err("Message id is required for reaction.")
+            return
+        if action not in {"set", "remove"}:
+            self._send_err("Reaction action must be 'set' or 'remove'.")
+            return
+        if action == "set" and not emoji:
+            self._send_err("Reaction cannot be empty.")
+            return
+        if action == "set" and len(emoji) > 16:
+            self._send_err("Reaction is too long.")
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        if scope == "room":
+            room_name = packet.get("room", "").strip()
+            if not room_name:
+                self._send_err("Room is required for room reaction.")
+                return
+            if not self._rooms.is_in_room(self._username, room_name):
+                self._send_err(f"You are not in room '{room_name}'.")
+                return
+
+            if action == "remove":
+                reactions = self._db.delete_reaction(message_id, self._username)
+            else:
+                reactions = self._db.save_reaction(
+                    message_id, self._username, emoji, timestamp
+                )
+            push = make_reaction_push(
+                scope="room",
+                room=room_name,
+                sender=self._username,
+                message_id=message_id,
+                emoji=emoji,
+                action=action,
+                timestamp=timestamp,
+                reactions=reactions,
+            )
+            self._rooms.broadcast_to_room(room_name, push)
+            logger.info(
+                "Reaction %s in '%s' by '%s': %s",
+                action,
+                room_name,
+                self._username,
+                emoji,
+            )
+            return
+
+        if scope == "private":
+            target = packet.get("target", "").strip()
+            if not target:
+                self._send_err("Target is required for private reaction.")
+                return
+            if target == self._username:
+                self._send_err("You cannot react to yourself.")
+                return
+            if not self._db.user_exists(target):
+                self._send_err(f"User '{target}' does not exist.")
+                return
+
+            if action == "remove":
+                reactions = self._db.delete_reaction(message_id, self._username)
+            else:
+                reactions = self._db.save_reaction(
+                    message_id, self._username, emoji, timestamp
+                )
+            push = make_reaction_push(
+                scope="private",
+                target=target,
+                sender=self._username,
+                message_id=message_id,
+                emoji=emoji,
+                action=action,
+                timestamp=timestamp,
+                reactions=reactions,
+            )
+            self._rooms.send_to_user(target, push)
+            self._rooms.send_to_user(self._username, push)
+            logger.info(
+                "Private reaction %s from '%s' to '%s': %s",
+                action,
+                self._username,
+                target,
+                emoji,
+            )
+            return
+
+        self._send_err("Reaction scope must be 'room' or 'private'.")
 
     def _handle_get_pm_history(self, packet: dict) -> None:
         if not self._require_login():
@@ -383,21 +649,21 @@ class ClientHandler:
 
         history = self._db.get_private_history(self._username, target)
 
-        send_packet(
-            self._sock, {"type": "pm_history", "target": target, "messages": history}
+        self._send_packet(
+            {"type": "pm_history", "target": target, "messages": history}
         )
 
     def _handle_get_rooms(self, packet: dict) -> None:
         if not self._require_login():
             return
         rooms = self._db.get_all_rooms(self._username)
-        send_packet(self._sock, make_room_list_packet(rooms))
+        self._send_packet(make_room_list_packet(rooms))
 
     def _handle_get_users(self, packet: dict) -> None:
         if not self._require_login():
             return
         users = self._rooms.get_online_users()
-        send_packet(self._sock, make_user_list_packet(users))
+        self._send_packet(make_user_list_packet(users))
 
     def _handle_get_friends(self, packet: dict) -> None:
         if not self._require_login():
@@ -410,7 +676,7 @@ class ClientHandler:
         requests = self._db.get_pending_received(self._username)
         from .protocol import make_pending_requests_list
 
-        send_packet(self._sock, make_pending_requests_list(requests))
+        self._send_packet(make_pending_requests_list(requests))
 
     def _handle_add_friend(self, packet: dict) -> None:
         if not self._require_login():
@@ -420,9 +686,7 @@ class ClientHandler:
         if ok:
             self._send_ok(msg)
             # Push real-time notification to the target if they are online.
-            target_sock = self._rooms.get_socket(target)
-            if target_sock:
-                send_packet(target_sock, make_friend_request_push(self._username))
+            self._rooms.send_to_user(target, make_friend_request_push(self._username))
         else:
             self._send_err(msg)
 
@@ -464,14 +728,16 @@ class ClientHandler:
     # Friend list push helpers
     # ------------------------------------------------------------------
 
+    def _push_user_list_to_all(self) -> None:
+        users = self._rooms.get_online_users()
+        self._rooms.broadcast_to_users(make_user_list_packet(users))
+
     def _send_friend_list_to(self, username: str) -> None:
         friends = [
             {"username": f, "online": self._rooms.is_online(f)}
             for f in self._db.get_friends(username)
         ]
-        sock = self._rooms.get_socket(username)
-        if sock:
-            send_packet(sock, make_friend_list_packet(friends))
+        self._rooms.send_to_user(username, make_friend_list_packet(friends))
 
     def _push_friend_status_to_friends(self, username: str) -> None:
         """Refresh friend lists for all online friends of *username*."""
@@ -488,6 +754,7 @@ class ClientHandler:
             user_rooms = self._rooms.get_user_rooms(self._username)
             self._rooms.remove_user(self._username)
 
+            self._push_user_list_to_all()
             self._push_friend_status_to_friends(self._username)
 
             for room_name in user_rooms:

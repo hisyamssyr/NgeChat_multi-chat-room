@@ -5,6 +5,7 @@ import secrets
 import sqlite3
 import string
 import threading
+import uuid
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class Database:
 
                 CREATE TABLE IF NOT EXISTS messages (
                     id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    message_id TEXT   UNIQUE,
                     room_name TEXT    NOT NULL,
                     sender    TEXT    NOT NULL,
                     message   TEXT    NOT NULL,
@@ -97,6 +99,32 @@ class Database:
                     status   TEXT NOT NULL DEFAULT 'pending',
                     added_at TEXT NOT NULL,
                     PRIMARY KEY (username, friend)
+                );
+
+                CREATE TABLE IF NOT EXISTS private_messages (
+                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    message_id TEXT   UNIQUE,
+                    sender    TEXT    NOT NULL,
+                    target    TEXT    NOT NULL,
+                    message   TEXT    NOT NULL,
+                    timestamp TEXT    NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS attachments (
+                    message_id  TEXT PRIMARY KEY,
+                    filename    TEXT NOT NULL,
+                    data        TEXT NOT NULL,
+                    size        INTEGER NOT NULL,
+                    kind        TEXT NOT NULL,
+                    stored_path TEXT NOT NULL DEFAULT ''
+                );
+
+                CREATE TABLE IF NOT EXISTS reactions (
+                    message_id TEXT NOT NULL,
+                    username   TEXT NOT NULL,
+                    emoji      TEXT NOT NULL,
+                    timestamp  TEXT NOT NULL,
+                    PRIMARY KEY (message_id, username)
                 );
             """)
             self._conn.commit()
@@ -117,10 +145,28 @@ class Database:
                 "ALTER TABLE friends ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'",
                 """CREATE TABLE IF NOT EXISTS private_messages (
                     id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    message_id TEXT   UNIQUE,
                     sender    TEXT    NOT NULL,
                     target    TEXT    NOT NULL,
                     message   TEXT    NOT NULL,
                     timestamp TEXT    NOT NULL
+                )""",
+                "ALTER TABLE messages ADD COLUMN message_id TEXT",
+                "ALTER TABLE private_messages ADD COLUMN message_id TEXT",
+                """CREATE TABLE IF NOT EXISTS attachments (
+                    message_id  TEXT PRIMARY KEY,
+                    filename    TEXT NOT NULL,
+                    data        TEXT NOT NULL,
+                    size        INTEGER NOT NULL,
+                    kind        TEXT NOT NULL,
+                    stored_path TEXT NOT NULL DEFAULT ''
+                )""",
+                """CREATE TABLE IF NOT EXISTS reactions (
+                    message_id TEXT NOT NULL,
+                    username   TEXT NOT NULL,
+                    emoji      TEXT NOT NULL,
+                    timestamp  TEXT NOT NULL,
+                    PRIMARY KEY (message_id, username)
                 )""",
             ]
             for sql in migrations:
@@ -131,6 +177,19 @@ class Database:
                 except Exception:
                     pass  # column / table already exists
 
+            try:
+                self._conn.execute(
+                    "UPDATE messages SET message_id = 'room-' || id "
+                    "WHERE message_id IS NULL OR message_id = ''"
+                )
+                self._conn.execute(
+                    "UPDATE private_messages SET message_id = 'pm-' || id "
+                    "WHERE message_id IS NULL OR message_id = ''"
+                )
+                self._conn.commit()
+            except sqlite3.Error:
+                pass
+
         logger.debug("Database tables verified / created.")
 
     @staticmethod
@@ -140,6 +199,10 @@ class Database:
     @staticmethod
     def _now_utc() -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    @staticmethod
+    def _new_message_id(prefix: str = "msg") -> str:
+        return f"{prefix}-{uuid.uuid4().hex}"
 
     # ------------------------------------------------------------------
     # User operations
@@ -333,21 +396,24 @@ class Database:
         return code.strip().upper() == row["invite_code"]
 
     def get_all_rooms(self, username: str = "") -> list[dict]:
+        username = username.strip()
         with self._lock:
-            if username:
-                rows = self._conn.execute(
-                    "SELECT r.room_name, r.created_by, r.invite_code, 1 AS is_member"
-                    " FROM rooms r"
-                    " JOIN room_members m ON m.room_name = r.room_name"
-                    " WHERE m.username = ?"
-                    " ORDER BY r.room_name ASC",
-                    (username,),
-                ).fetchall()
-            else:
-                rows = self._conn.execute(
-                    "SELECT room_name, created_by, invite_code, 0 AS is_member"
-                    " FROM rooms ORDER BY room_name ASC"
-                ).fetchall()
+            rows = self._conn.execute(
+                """
+                SELECT
+                    r.room_name,
+                    r.created_by,
+                    CASE WHEN m.username IS NULL THEN '' ELSE r.invite_code END
+                        AS invite_code,
+                    CASE WHEN m.username IS NULL THEN 0 ELSE 1 END
+                        AS is_member
+                FROM rooms r
+                LEFT JOIN room_members m
+                    ON m.room_name = r.room_name AND m.username = ?
+                ORDER BY r.room_name ASC
+                """,
+                (username,),
+            ).fetchall()
 
             return [
                 {
@@ -378,22 +444,25 @@ class Database:
         sender: str,
         message: str,
         timestamp: str | None = None,
-    ) -> bool:
+        message_id: str | None = None,
+    ) -> str:
         if timestamp is None:
             timestamp = self._now_utc()
+        if not message_id:
+            message_id = self._new_message_id("room")
 
         with self._lock:
             try:
                 self._conn.execute(
-                    "INSERT INTO messages (room_name, sender, message, timestamp)"
-                    " VALUES (?, ?, ?, ?)",
-                    (room_name, sender, message, timestamp),
+                    "INSERT INTO messages (message_id, room_name, sender, message, timestamp)"
+                    " VALUES (?, ?, ?, ?, ?)",
+                    (message_id, room_name, sender, message, timestamp),
                 )
                 self._conn.commit()
-                return True
+                return message_id
             except sqlite3.Error as exc:
                 logger.error("save_message DB error: %s", exc)
-                return False
+                return message_id
 
     def get_room_history(
         self, room_name: str, limit: int = HISTORY_LIMIT
@@ -403,9 +472,9 @@ class Database:
         with self._lock:
             rows = self._conn.execute(
                 """
-                SELECT sender, message, timestamp
+                SELECT id, message_id, sender, message, timestamp
                 FROM (
-                    SELECT id, sender, message, timestamp
+                    SELECT id, message_id, sender, message, timestamp
                     FROM   messages
                     WHERE  room_name = ?
                     ORDER  BY id DESC
@@ -415,14 +484,17 @@ class Database:
                 """,
                 (room_name, limit),
             ).fetchall()
-            return [
+            messages = [
                 {
+                    "message_id": r["message_id"] or f"room-{r['id']}",
                     "sender": r["sender"],
                     "message": r["message"],
                     "timestamp": r["timestamp"],
                 }
                 for r in rows
             ]
+            self._attach_message_metadata(messages)
+            return messages
 
     def save_private_message(
         self,
@@ -430,22 +502,25 @@ class Database:
         target: str,
         message: str,
         timestamp: str | None = None,
-    ) -> bool:
+        message_id: str | None = None,
+    ) -> str:
         if timestamp is None:
             timestamp = self._now_utc()
+        if not message_id:
+            message_id = self._new_message_id("pm")
 
         with self._lock:
             try:
                 self._conn.execute(
-                    "INSERT INTO private_messages (sender, target, message, timestamp)"
-                    " VALUES (?, ?, ?, ?)",
-                    (sender, target, message, timestamp),
+                    "INSERT INTO private_messages (message_id, sender, target, message, timestamp)"
+                    " VALUES (?, ?, ?, ?, ?)",
+                    (message_id, sender, target, message, timestamp),
                 )
                 self._conn.commit()
-                return True
+                return message_id
             except sqlite3.Error as exc:
                 logger.error("save_private_message DB error: %s", exc)
-                return False
+                return message_id
 
     def get_private_history(
         self, user1: str, user2: str, limit: int = HISTORY_LIMIT
@@ -453,9 +528,9 @@ class Database:
         with self._lock:
             rows = self._conn.execute(
                 """
-                SELECT sender, message, timestamp
+                SELECT id, message_id, sender, target, message, timestamp
                 FROM (
-                    SELECT id, sender, message, timestamp
+                    SELECT id, message_id, sender, target, message, timestamp
                     FROM   private_messages
                     WHERE  (sender = ? AND target = ?) OR (sender = ? AND target = ?)
                     ORDER  BY id DESC
@@ -465,14 +540,149 @@ class Database:
                 """,
                 (user1, user2, user2, user1, limit),
             ).fetchall()
-            return [
+            messages = [
                 {
+                    "message_id": r["message_id"] or f"pm-{r['id']}",
                     "sender": r["sender"],
+                    "target": r["target"],
                     "message": r["message"],
                     "timestamp": r["timestamp"],
                 }
                 for r in rows
             ]
+            self._attach_message_metadata(messages)
+            return messages
+
+    def save_attachment(
+        self,
+        message_id: str,
+        filename: str,
+        data: str,
+        size: int,
+        kind: str,
+        stored_path: str = "",
+    ) -> bool:
+        with self._lock:
+            try:
+                self._conn.execute(
+                    """
+                    INSERT OR REPLACE INTO attachments
+                    (message_id, filename, data, size, kind, stored_path)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (message_id, filename, data, size, kind, stored_path),
+                )
+                self._conn.commit()
+                return True
+            except sqlite3.Error as exc:
+                logger.error("save_attachment DB error: %s", exc)
+                return False
+
+    def save_reaction(
+        self, message_id: str, username: str, emoji: str, timestamp: str | None = None
+    ) -> list[dict]:
+        if timestamp is None:
+            timestamp = self._now_utc()
+
+        with self._lock:
+            try:
+                self._conn.execute(
+                    """
+                    INSERT INTO reactions (message_id, username, emoji, timestamp)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(message_id, username) DO UPDATE SET
+                        emoji = excluded.emoji,
+                        timestamp = excluded.timestamp
+                    """,
+                    (message_id, username, emoji, timestamp),
+                )
+                self._conn.commit()
+            except sqlite3.Error as exc:
+                logger.error("save_reaction DB error: %s", exc)
+
+        return self.get_reactions(message_id)
+
+    def delete_reaction(self, message_id: str, username: str) -> list[dict]:
+        with self._lock:
+            try:
+                self._conn.execute(
+                    "DELETE FROM reactions WHERE message_id = ? AND username = ?",
+                    (message_id, username),
+                )
+                self._conn.commit()
+            except sqlite3.Error as exc:
+                logger.error("delete_reaction DB error: %s", exc)
+
+        return self.get_reactions(message_id)
+
+    def get_reactions(self, message_id: str) -> list[dict]:
+        with self._lock:
+            rows = self._conn.execute(
+                """
+                SELECT username, emoji, timestamp
+                FROM reactions
+                WHERE message_id = ?
+                ORDER BY timestamp ASC
+                """,
+                (message_id,),
+            ).fetchall()
+            return [
+                {"username": r["username"], "emoji": r["emoji"], "timestamp": r["timestamp"]}
+                for r in rows
+            ]
+
+    def _attach_message_metadata(self, messages: list[dict]) -> None:
+        if not messages:
+            return
+
+        ids = [m["message_id"] for m in messages if m.get("message_id")]
+        if not ids:
+            return
+
+        placeholders = ",".join("?" for _ in ids)
+
+        attachment_rows = self._conn.execute(
+            f"""
+            SELECT message_id, filename, data, size, kind
+            FROM attachments
+            WHERE message_id IN ({placeholders})
+            """,
+            ids,
+        ).fetchall()
+        attachments = {
+            r["message_id"]: {
+                "filename": r["filename"],
+                "data": r["data"],
+                "size": r["size"],
+                "kind": r["kind"],
+            }
+            for r in attachment_rows
+        }
+
+        reaction_rows = self._conn.execute(
+            f"""
+            SELECT message_id, username, emoji, timestamp
+            FROM reactions
+            WHERE message_id IN ({placeholders})
+            ORDER BY timestamp ASC
+            """,
+            ids,
+        ).fetchall()
+        reactions: dict[str, list[dict]] = {}
+        for r in reaction_rows:
+            reactions.setdefault(r["message_id"], []).append(
+                {
+                    "username": r["username"],
+                    "emoji": r["emoji"],
+                    "timestamp": r["timestamp"],
+                }
+            )
+
+        for message in messages:
+            message_id = message.get("message_id")
+            if message_id in attachments:
+                message["attachment"] = attachments[message_id]
+            message["reactions"] = reactions.get(message_id, [])
 
     # ------------------------------------------------------------------
     # Friend operations

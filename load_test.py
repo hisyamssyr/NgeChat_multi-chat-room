@@ -6,6 +6,7 @@ import struct
 import sys
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -110,6 +111,7 @@ def run_simulated_client(
     sock = make_tls_socket(host, port)
     if sock is None:
         result.error = "Gagal membuat koneksi TLS"
+        start_barrier.abort()
         return
 
     result.connected = True
@@ -128,6 +130,7 @@ def run_simulated_client(
     if resp is None or resp.get("status") != "ok":
         result.error = f"Login gagal: {resp}"
         sock.close()
+        start_barrier.abort()
         return
 
     # --- Bergabung ke ruang menggunakan kode undangan ---
@@ -139,6 +142,7 @@ def run_simulated_client(
         elif resp is None:
             result.error = "Gagal bergabung ke ruang"
             sock.close()
+            start_barrier.abort()
             return
 
     # Baca dan buang semua paket antrian (history, dll.)
@@ -155,10 +159,16 @@ def run_simulated_client(
     room_name_resp = resp.get("room_name", "load-test-room") if resp else "load-test-room"
 
     # --- Tunggu semua klien siap sebelum mulai mengirim pesan ---
-    start_barrier.wait()
+    try:
+        start_barrier.wait(timeout=30)
+    except threading.BrokenBarrierError:
+        result.error = "Pengujian dibatalkan karena ada klien yang gagal siap"
+        sock.close()
+        return
 
     # --- Kirim pesan ---
     for i in range(num_messages):
+        message_id = f"lt-{client_id:04d}-{i + 1}-{uuid.uuid4().hex}"
         msg_text = f"[LT-{client_id:04d}] pesan ke-{i + 1}"
         t_send = time.perf_counter()
 
@@ -166,19 +176,32 @@ def run_simulated_client(
             "type": "broadcast",
             "room": room_name_resp,
             "message": msg_text,
+            "message_id": message_id,
         })
 
         if not ok:
             result.messages_failed += 1
         else:
-            # Ukur latensi: tunggu echo kembali (paket broadcast dari server)
+            # Ukur latensi: tunggu echo dengan message_id yang sama.
             sock.settimeout(5.0)
             try:
-                echo = recv_packet(sock)
-                t_recv = time.perf_counter()
-                if echo and echo.get("type") == "broadcast":
-                    result.latencies.append((t_recv - t_send) * 1000)  # ms
-                result.messages_sent += 1
+                matched = False
+                deadline = time.perf_counter() + 5.0
+                while time.perf_counter() < deadline:
+                    echo = recv_packet(sock)
+                    if echo is None:
+                        break
+                    if (
+                        echo.get("type") == "broadcast"
+                        and echo.get("message_id") == message_id
+                    ):
+                        t_recv = time.perf_counter()
+                        result.latencies.append((t_recv - t_send) * 1000)  # ms
+                        result.messages_sent += 1
+                        matched = True
+                        break
+                if not matched:
+                    result.messages_failed += 1
             except Exception:
                 result.messages_failed += 1
             finally:

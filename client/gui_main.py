@@ -11,7 +11,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QApplication, QDialog
 
 from client.gui.login_window import LoginWindow
-from client.gui.main_window import MainWindow
+from client.gui.main_window import APP_TITLE, MainWindow
 from client.gui.styles import apply_dark_theme
 
 logging.basicConfig(level=logging.WARNING)
@@ -36,7 +36,7 @@ def main() -> None:
     args = parser.parse_args()
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Multi-Chat Room")
+    app.setApplicationName(APP_TITLE)
     app.setOrganizationName("NetworkProgramming")
 
     app.setStyle("Fusion")

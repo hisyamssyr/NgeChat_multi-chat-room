@@ -10,14 +10,18 @@ logger = logging.getLogger(__name__)
 class RoomManager:
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        self._online_users: dict[str, Any] = {}  # username → socket
-        self._room_members: dict[str, set[str]] = {}  # room → {usernames}
+        self._online_users: dict[str, Any] = {}
+        self._send_locks: dict[str, threading.Lock] = {}
+        self._room_members: dict[str, set[str]] = {}
 
     # Online-user management
 
-    def add_user(self, username: str, sock) -> None:
+    def add_user(
+        self, username: str, sock, send_lock: threading.Lock | None = None
+    ) -> None:
         with self._lock:
             self._online_users[username] = sock
+            self._send_locks[username] = send_lock or threading.Lock()
             logger.info("User came online: %s", username)
 
     def remove_user(self, username: str) -> None:
@@ -26,6 +30,7 @@ class RoomManager:
                 return
 
             del self._online_users[username]
+            self._send_locks.pop(username, None)
 
             departed_rooms = [
                 room
@@ -50,6 +55,10 @@ class RoomManager:
     def get_socket(self, username: str):
         with self._lock:
             return self._online_users.get(username)
+
+    def get_send_lock(self, username: str) -> threading.Lock | None:
+        with self._lock:
+            return self._send_locks.get(username)
 
     def get_online_users(self) -> list[str]:
         with self._lock:
@@ -122,8 +131,6 @@ class RoomManager:
         packet: dict,
         exclude: str | None = None,
     ) -> int:
-        from server.protocol import send_packet  # local import — avoids circular dep
-
         with self._lock:
             members = list(self._room_members.get(room_name, set()))
 
@@ -131,19 +138,33 @@ class RoomManager:
         for username in members:
             if username == exclude:
                 continue
-            sock = self.get_socket(username)
-            if sock and send_packet(sock, packet):
+            if self.send_to_user(username, packet):
                 sent += 1
 
         return sent
 
     def send_to_user(self, username: str, packet: dict) -> bool:
-        from server.protocol import send_packet  # local import — avoids circular dep
+        from server.protocol import send_packet
 
-        sock = self.get_socket(username)
+        with self._lock:
+            sock = self._online_users.get(username)
+            send_lock = self._send_locks.get(username)
         if sock is None:
             return False
-        return send_packet(sock, packet)
+        if send_lock is None:
+            return send_packet(sock, packet)
+        with send_lock:
+            return send_packet(sock, packet)
+
+    def broadcast_to_users(self, packet: dict) -> int:
+        with self._lock:
+            usernames = list(self._online_users.keys())
+
+        sent = 0
+        for username in usernames:
+            if self.send_to_user(username, packet):
+                sent += 1
+        return sent
 
     # Diagnostics
 
