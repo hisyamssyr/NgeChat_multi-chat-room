@@ -9,5 +9,5 @@ database/
 logs/
 uploads/
 downloads/
-load_test_result_*.txt
 .venv/
+testing/
